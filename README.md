@@ -20,11 +20,11 @@ The main features of `mapper` include:
 The design layout of `mapper` for mapping from generics to tradeable
 instruments is as follows
 
-![workflow](/mapper.svg)
+![workflow](/mapper.png)
 
 The layout for mapping from tradeables to generics is as follows
 
-![workflow](/mapper2.svg)
+![workflow](/mapper2.png)
 
 # Install
 
