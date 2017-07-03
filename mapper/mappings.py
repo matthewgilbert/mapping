@@ -18,12 +18,9 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
         representing the last date of the roll as values
     get_weights: function
         A function which takes in a timestamp, contract_dates and **kwargs and
-        returns a pandas.DataFrame of loadings of generic contracts on
-        tradeable instruments for a given date. The columns are integers
-        refering to generic number indexed from 0, e.g. [0, 1], and the index
-        is a MultiIndex where the top level is the date represented by a
-        pandas.Timestamp and the second level are strings representing
-        instrument names.
+        returns a list of tuples consisting of the generic instrument number as
+        an int, the tradeable contract as a string, the weight on this contract
+        as a float and the date as a pandas.Timestamp.
     kwargs: keyword arguments
         Arguements to pass to get_weights
 
@@ -54,18 +51,48 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
     weights = []
     for ts in timestamps:
         contract_dates = contract_dates.loc[contract_dates >= ts]
-        weights.append(get_weights(ts, contract_dates, **kwargs))
+        weights.extend(get_weights(ts, contract_dates, **kwargs))
 
-    weights = pd.concat(weights, axis=0)
-    weights = weights.sort_index()
-    weights = weights.astype(float)
+    weights = aggregate_weights(weights)
+
     return weights
+
+
+def aggregate_weights(weights, drop_date=False):
+    """
+    Transforms list of tuples of weights into pandas.DataFrame of weights.
+
+    Parameters:
+    -----------
+    weights: list
+        A list of tuples consisting of the generic instrument number as an int,
+        the tradeable contract as a string, the weight on this contract as a
+        float and the date as a pandas.Timestamp.
+    drop_date: boolean
+        Whether to drop the date from the multiIndex
+
+    Returns
+    -------
+    A pandas.DataFrame of loadings of generic contracts on tradeable
+    instruments for a given date. The columns are integers refering to
+    generic number indexed from 0, e.g. [0, 1], and the index is strings
+    representing instrument names.
+    """
+    dwts = pd.DataFrame(weights,
+                        columns=["generic", "contract", "weight", "date"])
+    dwts = dwts.pivot_table(index=['date', 'contract'],
+                            columns=['generic'], values='weight', fill_value=0)
+    dwts = dwts.astype(float)
+    dwts = dwts.sort_index()
+    if drop_date:
+        dwts.index = dwts.index.levels[-1]
+    return dwts
 
 
 def static_transition(timestamp, contract_dates, transition):
     """
     Return weights to tradeable instruments for a given date based on a
-    transition DataFrame which indicates how to role through the role period.
+    transition DataFrame which indicates how to roll through the roll period.
 
     Parameters
     ----------
@@ -79,7 +106,7 @@ def static_transition(timestamp, contract_dates, transition):
         from the last roll date and a column which is a MultiIndex where the
         top level is integers representing generic instruments starting from 0
         and the second level is ['front', 'back'] which refer to the front
-        month contract and the back month contract of the role. Note that for
+        month contract and the back month contract of the roll. Note that for
         different generics, e.g. CL1, CL2, the front and back month
         contract during a roll would refer to different underlying instruments.
         The values represent the fraction of the roll on each day during the
@@ -89,11 +116,9 @@ def static_transition(timestamp, contract_dates, transition):
 
     Returns
     -------
-    A pandas.DataFrame of loadings of generic contracts on tradeable
-    instruments for a given date. The columns are integers refering to generic
-    number indexed from 0, e.g. [0, 1], and the index is a MultiIndex where the
-    top level is the date represented by a pandas.Timestamp and the second
-    level are strings representing instrument names.
+    A list of tuples consisting of the generic instrument number as an int,
+    the tradeable contract as a string, the weight on this contract as a float
+    and the date as a pandas.Timestamp.
 
     Examples
     --------
@@ -110,34 +135,26 @@ def static_transition(timestamp, contract_dates, transition):
     >>> wts = mappings.static_transition(ts, contract_dates, transition)
     """
     contract_dates = contract_dates.loc[contract_dates >= timestamp]
+    contracts = contract_dates.index
     front_expiry_dt = contract_dates.iloc[0]
     transition = transition.copy()
     new_idx = [BDay(i) + front_expiry_dt for i in transition.index]
     transition.index = new_idx
 
     weights = transition.reindex([timestamp], method='bfill').loc[timestamp]
-    new_idx2 = []
-    for gen_num, position in weights.index.tolist():
-        if position == "front":
-            val = gen_num
-        elif position == "back":
-            val = gen_num + 1
-        else:
-            raise ValueError("transition.columns must contain "
-                             "'front' or 'back'")
-        new_idx2.append((gen_num, contract_dates.index[val]))
+    cwts = []
+    for gen_num, position, weighting in weights.to_frame().to_records():
+        if weighting != 0:
+            if position == "front":
+                cntrct_idx = gen_num
+            elif position == "back":
+                cntrct_idx = gen_num + 1
+            else:
+                raise ValueError("transition.columns must contain "
+                                 "'front' or 'back'")
+            cwts.append((gen_num, contracts[cntrct_idx], weighting, timestamp))
 
-    weights.index = pd.MultiIndex.from_tuples(new_idx2)
-    weights = weights.reset_index()
-    weights.columns = ["generic", "contract", "weight"]
-    weights["date"] = timestamp
-
-    weights = weights.groupby(['contract', 'date']).filter(lambda x: x.weight.any())  # NOQA
-    weights = weights.pivot_table(index=['date', 'contract'],
-                                  columns=['generic'], values='weight',
-                                  fill_value=0)
-    weights = weights.astype(float)
-    return weights
+    return cwts
 
 
 def to_generics(instruments, weights):

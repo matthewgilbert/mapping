@@ -1,3 +1,5 @@
 .coverage
 .cache
 *__pycache__
+*.ipynb_checkpoints
+mapper.egg-info

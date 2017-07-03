@@ -46,7 +46,7 @@ def calc_rets(returns, weights):
     ...                                   (pd.Timestamp('2015-01-04'), 'CLG5'),
     ...                                   (pd.Timestamp('2015-01-05'), 'CLG5')])
     >>> weights = pd.DataFrame(vals, index=widx, columns=[0])
-    >>> irets = price.groupby(level=-1).diff()
+    >>> irets = price.groupby(level=-1).pct_change()
     >>> util.calc_rets(irets, weights)
     """  # NOQA
 

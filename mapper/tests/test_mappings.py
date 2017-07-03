@@ -48,11 +48,39 @@ class TestMappings(unittest.TestCase):
                                   index=idx, columns=cols)
 
         wts = mappings.static_transition(ts, contract_dates, transition)
-        idx = pd.MultiIndex.from_product([[ts], ["CLX16"]],
+        wts_exp = [(0, 'CLX16', 1.0, ts)]
+        self.assertEqual(wts, wts_exp)
+
+    def test_aggregate_weights(self):
+        ts = pd.Timestamp("2015-01-01")
+        wts_list = [(0, 'CLX16', 1.0, ts), (1, 'CLZ16', 1.0, ts)]
+        wts = mappings.aggregate_weights(wts_list)
+        idx = pd.MultiIndex.from_product([[ts], ["CLX16", "CLZ16"]],
                                          names=["date", "contract"])
-        cols = pd.Index([0], name="generic")
-        wts_exp = pd.DataFrame([1.0], index=idx, columns=cols)
+        cols = pd.Index([0, 1], name="generic")
+        wts_exp = pd.DataFrame([[1.0, 0], [0, 1.0]], index=idx, columns=cols)
         assert_frame_equal(wts, wts_exp)
+
+    def test_aggregate_weights_drop_date(self):
+        ts = pd.Timestamp("2015-01-01")
+        wts_list = [(0, 'CLX16', 1.0, ts), (1, 'CLZ16', 1.0, ts)]
+        wts = mappings.aggregate_weights(wts_list, drop_date=True)
+        idx = pd.Index(["CLX16", "CLZ16"], name="contract")
+        cols = pd.Index([0, 1], name="generic")
+        wts_exp = pd.DataFrame([[1.0, 0], [0, 1.0]], index=idx, columns=cols)
+        assert_frame_equal(wts, wts_exp)
+
+    def test_not_in_roll_one_generic_zero_weight_back_contract_no_contract_static_transition(self):  # NOQA
+        contract_dates = self.dates.iloc[0:1]
+        ts = self.dates.iloc[0] + BDay(-8)
+        cols = pd.MultiIndex.from_product([[0], ['front', 'back']])
+        idx = [-2, -1, 0]
+        transition = pd.DataFrame([[1.0, 0.0], [0.5, 0.5], [0.0, 1.0]],
+                                  index=idx, columns=cols)
+
+        wts = mappings.static_transition(ts, contract_dates, transition)
+        wts_exp = [(0, 'CLX16', 1.0, ts)]
+        self.assertEqual(wts, wts_exp)
 
     def test_static_bad_transition(self):
         contract_dates = self.dates.iloc[[0]]
@@ -78,11 +106,8 @@ class TestMappings(unittest.TestCase):
                                   index=idx, columns=cols)
 
         wts = mappings.static_transition(ts, contract_dates, transition)
-        idx = pd.MultiIndex.from_product([[ts], ["CLX16", "CLZ16"]],
-                                         names=['date', 'contract'])
-        cols = pd.Index([0, 1], name="generic")
-        wts_exp = pd.DataFrame([[1.0, 0], [0, 1.0]], index=idx, columns=cols)
-        assert_frame_equal(wts, wts_exp)
+        wts_exp = [(0, 'CLX16', 1.0, ts), (1, 'CLZ16', 1.0, ts)]
+        self.assertEqual(wts, wts_exp)
 
     def test_not_in_roll_two_generics_static_roller(self):
         dt = self.dates.iloc[0]
@@ -117,14 +142,10 @@ class TestMappings(unittest.TestCase):
                                   index=idx, columns=cols)
         wts = mappings.static_transition(ts, contract_dates, transition)
 
-        idx = pd.MultiIndex.from_product([[ts], ["CLX16", "CLZ16", "CLF17"]],
-                                         names=['date', 'contract'])
-        cols = pd.Index([0, 1], name="generic")
-        wts_exp = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]], index=idx,
-                               columns=cols)
-        wts_exp = wts_exp.sort_index()
+        wts_exp = [(0, 'CLX16', 0.5, ts), (0, 'CLZ16', 0.5, ts),
+                   (1, 'CLZ16', 0.5, ts), (1, 'CLF17', 0.5, ts)]
 
-        assert_frame_equal(wts, wts_exp)
+        self.assertEqual(wts, wts_exp)
 
     def test_during_roll_two_generics_one_day_static_roller(self):
         dt = self.dates.iloc[0]
