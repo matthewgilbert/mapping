@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import cvxpy
-from pandas.tseries.offsets import BDay
 
 
 def roller(timestamps, contract_dates, get_weights, **kwargs):
@@ -99,7 +98,7 @@ def static_transition(timestamp, contract_dates, transition):
         The timestamp to return instrument weights for
     contract_dates: pandas.Series
         Series with index of tradeable contract names and pandas.Timestamps
-        representing the last date of the roll as values
+        representing the last date of the roll as values, sorted by values.
     transition: pandas.DataFrame
         A DataFrame with a index of integers representing business day offsets
         from the last roll date and a column which is a MultiIndex where the
@@ -133,16 +132,24 @@ def static_transition(timestamp, contract_dates, transition):
     >>> ts = pd.Timestamp('2016-10-19')
     >>> wts = mappings.static_transition(ts, contract_dates, transition)
     """
+
+    # further speedup can be obtained using contract_dates.loc[timestamp:]
+    # but this requires swapping contract_dates index and values
     contract_dates = contract_dates.loc[contract_dates >= timestamp]
     contracts = contract_dates.index
     front_expiry_dt = contract_dates.iloc[0]
-    transition = transition.copy()
-    new_idx = [BDay(i) + front_expiry_dt for i in transition.index]
-    transition.index = new_idx
+    days_to_expiry = np.busday_count(front_expiry_dt, timestamp)
 
-    weights = transition.reindex([timestamp], method='bfill').loc[timestamp]
+    if days_to_expiry in transition.index:
+        weights_iter = transition.loc[days_to_expiry].iteritems()
+    else:
+        # provides significant speedup over transition.iloc[0].iteritems()
+        vals = transition.values[0]
+        weights_iter = zip(transition.columns.tolist(), vals)
+
     cwts = []
-    for gen_num, position, weighting in weights.to_frame().to_records():
+    for idx_tuple, weighting in weights_iter:
+        gen_num, position = idx_tuple
         if weighting != 0:
             if position == "front":
                 cntrct_idx = gen_num
