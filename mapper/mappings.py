@@ -50,7 +50,6 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
     contract_dates = contract_dates.sort_values()
     weights = []
     for ts in timestamps:
-        contract_dates = contract_dates.loc[contract_dates >= ts]
         weights.extend(get_weights(ts, contract_dates, **kwargs))
 
     weights = aggregate_weights(weights)
