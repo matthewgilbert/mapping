@@ -72,6 +72,7 @@ def calc_rets(returns, weights):
             cols.extend([ast + str(i) for i in wts.columns.tolist()])
 
     rets = pd.concat(grets, axis=1, keys=cols)
+    rets = rets.loc[:, rets.columns.sort_values()]
     return rets
 
 

@@ -205,7 +205,7 @@ def to_generics(instruments, weights):
     Returns
     -------
     A pandas.Series where the index is the generic and the value is the number
-    of contracts.
+    of contracts, sorted by index.
 
     Examples
     --------
@@ -250,4 +250,5 @@ def to_generics(instruments, weights):
                        " instruments" % unmapped_instr.tolist())
 
     allocations = pd.concat(allocations, axis=0)
+    allocations = allocations.sort_index()
     return allocations
