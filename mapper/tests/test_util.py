@@ -1,4 +1,5 @@
 import unittest
+import os
 from mapper import util
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
@@ -7,10 +8,28 @@ import pandas as pd
 class TestUtil(unittest.TestCase):
 
     def setUp(self):
-        pass
+        cdir = os.path.dirname(__file__)
+        path = os.path.join(cdir, 'data/')
+        files = ["CME-FVU2014.csv", "CME-FVZ2014.csv"]
+        self.prices = [os.path.join(path, f) for f in files]
 
     def tearDown(self):
         pass
+
+    def test_read_price_data(self):
+
+        def name_func(fstr):
+            name = fstr.split('-')[1].split('.')[0]
+            return name[-4:] + name[:3]
+
+        df = util.read_price_data(self.prices, name_func)
+        dt1 = pd.Timestamp("2014-09-30")
+        dt2 = pd.Timestamp("2014-10-01")
+        idx = pd.MultiIndex.from_tuples([(dt1, "2014FVU"), (dt1, "2014FVZ"),
+                                         (dt2, "2014FVZ")])
+        df_exp = pd.DataFrame([119.27344, 118.35938, 118.35938],
+                              index=idx, columns=["Open"])
+        assert_frame_equal(df, df_exp)
 
     def test_calc_rets_one_generic(self):
         idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),

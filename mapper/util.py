@@ -2,6 +2,37 @@ import pandas as pd
 import numpy as np
 
 
+def read_price_data(files, name_func):
+    """
+    Convenience function for reading in pricing data from csv files
+
+    Parameters
+    ----------
+    files: list
+        List of strings refering to csv files to read data in from, first
+        column should be dates
+    name_func: func
+        A function to apply to the file strings to infer the instrument name,
+        used in the second level of the MultiIndex index.
+
+    Returns
+    -------
+    A pandas.DataFrame with a pandas.MultiIndex where the top level is
+    pandas.Timestamps and the second level is instrument names. Columns are
+    given by the csv file columns.
+    """
+
+    dfs = []
+    for f in files:
+        name = name_func(f)
+        df = pd.read_csv(f, index_col=0, parse_dates=True)
+        df.sort_index(inplace=True)
+        df.index = pd.MultiIndex.from_product([df.index, [name]])
+        dfs.append(df)
+
+    return pd.concat(dfs, axis=0).sort_index()
+
+
 def calc_rets(returns, weights):
     """
     Calculate continuous return series for futures instruments. These consist
@@ -17,7 +48,7 @@ def calc_rets(returns, weights):
         available for all for all Timestamps and instruments provided in
         weights. If dict is given this should be a dict of pandas.Series in the
         above format, with assets as keys, e.g. 'CL'
-    weights: pandas.DataFrame
+    weights: pandas.DataFrame or dict
         A DataFrame of instrument weights with a MultiIndex where the top level
         contains pandas.Timestamps and the second level is instrument names.
         The columns consist of generic names. If dict is given this should be
