@@ -51,6 +51,17 @@ class TestMappings(unittest.TestCase):
         wts_exp = [(0, 'CLX16', 1.0, ts)]
         self.assertEqual(wts, wts_exp)
 
+    def test_finished_roll_pre_expiry_static_transition(self):
+        contract_dates = self.dates.iloc[0:2]
+        ts = self.dates.iloc[0] + BDay(-2)
+        cols = pd.MultiIndex.from_product([[0], ['front', 'back']])
+        idx = [-9, -8]
+        transition = pd.DataFrame([[1.0, 0.0], [0.0, 1.0]],
+                                  index=idx, columns=cols)
+        wts = mappings.static_transition(ts, contract_dates, transition)
+        wts_exp = [(0, 'CLZ16', 1.0, ts)]
+        self.assertEqual(wts, wts_exp)
+
     def test_not_in_roll_one_generic_filtering_front_contracts_static_transition(self):  # NOQA
         contract_dates = self.dates.iloc[0:2]
         ts = self.dates.iloc[1] + BDay(-8)

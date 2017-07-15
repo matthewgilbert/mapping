@@ -142,9 +142,14 @@ def static_transition(timestamp, contract_dates, transition):
 
     if days_to_expiry in transition.index:
         weights_iter = transition.loc[days_to_expiry].iteritems()
-    else:
+    # roll hasn't started yet
+    elif days_to_expiry < transition.index.min():
         # provides significant speedup over transition.iloc[0].iteritems()
         vals = transition.values[0]
+        weights_iter = zip(transition.columns.tolist(), vals)
+    # roll is finished
+    else:
+        vals = transition.values[-1]
         weights_iter = zip(transition.columns.tolist(), vals)
 
     cwts = []
