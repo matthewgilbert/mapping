@@ -323,10 +323,10 @@ class TestMappings(unittest.TestCase):
     def test_to_generics_two_generics_multi_asset(self):
         wts1 = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
                             index=['CLX16', 'CLZ16', 'CLF17'],
-                            columns=[0, 1])
+                            columns=["CL0", "CL1"])
         wts2 = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
                             index=['COX16', 'COZ16', 'COF17'],
-                            columns=[0, 1])
+                            columns=["CO0", "CO1"])
         wts = {"CL": wts1, "CO": wts2}
         instrs = pd.Series([10, 20, 10, 10, 20, 10],
                            index=["CLX16", "CLZ16", "CLF17",

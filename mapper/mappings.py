@@ -253,10 +253,7 @@ def to_generics(instruments, weights):
         prob.solve()
 
         vals = np.array(x.value).squeeze()
-        if key == "":
-            idx = w.columns.tolist()
-        else:
-            idx = [key + str(i) for i in w.columns.tolist()]
+        idx = w.columns.tolist()
         allocations.append(pd.Series(vals, index=idx))
 
     if len(unmapped_instr) > 0:
