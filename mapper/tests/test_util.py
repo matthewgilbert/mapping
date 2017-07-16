@@ -77,6 +77,33 @@ class TestUtil(unittest.TestCase):
                                  columns=['CL1', 'CL2'])
         assert_frame_equal(wrets, wrets_exp)
 
+    def test_calc_rets_two_generics_non_unique_columns(self):
+        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
+                                         (pd.Timestamp('2015-01-03'), 'CLG5'),
+                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
+                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
+                                         (pd.Timestamp('2015-01-04'), 'CLH5'),
+                                         (pd.Timestamp('2015-01-05'), 'CLG5'),
+                                         (pd.Timestamp('2015-01-05'), 'CLH5')])
+        rets = pd.Series([0.1, 0.15, 0.05, 0.1, 0.8, -0.5, 0.2], index=idx)
+        vals = [[1, 0], [0, 1],
+                [0.5, 0], [0.5, 0.5], [0, 0.5],
+                [1, 0], [0, 1]]
+        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
+                                          (pd.Timestamp('2015-01-03'), 'CLG5'),
+                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
+                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
+                                          (pd.Timestamp('2015-01-04'), 'CLH5'),
+                                          (pd.Timestamp('2015-01-05'), 'CLG5'),
+                                          (pd.Timestamp('2015-01-05'), 'CLH5')
+                                          ])
+        weights = pd.DataFrame(vals, index=widx, columns=['CL1', 'CL1'])
+
+        def non_unique():
+            return util.calc_rets(rets, weights)
+
+        self.assertRaises(ValueError, non_unique)
+
     def test_calc_rets_two_generics_two_asts(self):
         idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
                                          (pd.Timestamp('2015-01-03'), 'CLG5'),
@@ -105,7 +132,7 @@ class TestUtil(unittest.TestCase):
                                           (pd.Timestamp('2015-01-05'), 'CLG5'),
                                           (pd.Timestamp('2015-01-05'), 'CLH5')
                                           ])
-        weights1 = pd.DataFrame(vals, index=widx, columns=[0, 1])
+        weights1 = pd.DataFrame(vals, index=widx, columns=["CL0", "CL1"])
         vals = [[1, 0], [0, 1],
                 [0.5, 0], [0.5, 0.5], [0, 0.5]]
         widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'COF5'),
@@ -114,7 +141,7 @@ class TestUtil(unittest.TestCase):
                                           (pd.Timestamp('2015-01-04'), 'COG5'),
                                           (pd.Timestamp('2015-01-04'), 'COH5')
                                           ])
-        weights2 = pd.DataFrame(vals, index=widx, columns=[0, 1])
+        weights2 = pd.DataFrame(vals, index=widx, columns=["CO0", "CO1"])
         weights = {"CL": weights1, "CO": weights2}
         wrets = util.calc_rets(rets, weights)
         wrets_exp = pd.DataFrame([[0.1, 0.15, 0.1, 0.15],

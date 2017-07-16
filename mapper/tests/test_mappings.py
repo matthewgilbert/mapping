@@ -93,6 +93,16 @@ class TestMappings(unittest.TestCase):
         wts_exp = pd.DataFrame([[1.0, 0], [0, 1.0]], index=idx, columns=cols)
         assert_frame_equal(wts, wts_exp)
 
+    def test_aggregate_weights_prepend_generic(self):
+        ts = pd.Timestamp("2015-01-01")
+        wts_list = [(0, 'CLX16', 1.0, ts), (1, 'CLZ16', 1.0, ts)]
+        wts = mappings.aggregate_weights(wts_list, generic="CL")
+        idx = pd.MultiIndex.from_product([[ts], ["CLX16", "CLZ16"]],
+                                         names=["date", "contract"])
+        cols = pd.Index(["CL0", "CL1"], name="generic")
+        wts_exp = pd.DataFrame([[1.0, 0], [0, 1.0]], index=idx, columns=cols)
+        assert_frame_equal(wts, wts_exp)
+
     def test_not_in_roll_one_generic_zero_weight_back_contract_no_contract_static_transition(self):  # NOQA
         contract_dates = self.dates.iloc[0:1]
         ts = self.dates.iloc[0] + BDay(-8)

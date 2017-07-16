@@ -3,7 +3,7 @@ import numpy as np
 import cvxpy
 
 
-def roller(timestamps, contract_dates, get_weights, **kwargs):
+def roller(timestamps, contract_dates, get_weights, generic=None, **kwargs):
     """
     Calculate weight allocations to tradeable instruments for generic futures
     at a set of timestamps.
@@ -20,14 +20,16 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
         returns a list of tuples consisting of the generic instrument number as
         an int, the tradeable contract as a string, the weight on this contract
         as a float and the date as a pandas.Timestamp.
+    generic: str
+        A string which is preprended to the column generic numbers, e.g. "CL"
     kwargs: keyword arguments
         Arguements to pass to get_weights
 
     Return
     ------
-    A pandas.DataFrame with integer columns of generics starting from 0 and a
-    MultiIndex of date and contract. Values represent weights on tradeables for
-    each generic
+    A pandas.DataFrame with integer columns of generics starting from 0 or
+    strings of generics, e.g. "CL0", and a MultiIndex of date and contract.
+    Values represent weights on tradeables for each generic
 
     Examples
     --------
@@ -51,12 +53,12 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
     for ts in timestamps:
         weights.extend(get_weights(ts, contract_dates, **kwargs))
 
-    weights = aggregate_weights(weights)
+    weights = aggregate_weights(weights, generic=generic)
 
     return weights
 
 
-def aggregate_weights(weights, drop_date=False):
+def aggregate_weights(weights, drop_date=False, generic=None):
     """
     Transforms list of tuples of weights into pandas.DataFrame of weights.
 
@@ -68,12 +70,15 @@ def aggregate_weights(weights, drop_date=False):
         float and the date as a pandas.Timestamp.
     drop_date: boolean
         Whether to drop the date from the multiIndex
+    generic: str
+        A string which is prepended to the column generic numbers, e.g. "CL"
 
     Returns
     -------
     A pandas.DataFrame of loadings of generic contracts on tradeable
     instruments for a given date. The columns are integers refering to
-    generic number indexed from 0, e.g. [0, 1], and the index is strings
+    generic number indexed from 0, e.g. [0, 1], or if generic is given they are
+    generic strings, e.g. ["CL0", "CL1"], and the index is strings
     representing instrument names.
     """
     dwts = pd.DataFrame(weights,
@@ -84,6 +89,10 @@ def aggregate_weights(weights, drop_date=False):
     dwts = dwts.sort_index()
     if drop_date:
         dwts.index = dwts.index.levels[-1]
+    if generic:
+        nm = dwts.columns.name
+        dwts.columns = generic + dwts.columns.astype(str)
+        dwts.columns.name = nm
     return dwts
 
 

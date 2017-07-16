@@ -47,20 +47,19 @@ def calc_rets(returns, weights):
         correspond to one period instrument returns. returns should be
         available for all for all Timestamps and instruments provided in
         weights. If dict is given this should be a dict of pandas.Series in the
-        above format, with assets as keys, e.g. 'CL'
+        above format, with keys which are a subset of the keys given in weights
     weights: pandas.DataFrame or dict
         A DataFrame of instrument weights with a MultiIndex where the top level
         contains pandas.Timestamps and the second level is instrument names.
         The columns consist of generic names. If dict is given this should be
-        a dict of pandas.Series in the above format, with assets as keys, e.g.
-        'CL'
+        a dict of pandas.Series in the above format, with keys for different
+        assets, e.g. 'CL'
 
     Returns
     -------
     A pandas.DataFrame of continuous returns for generics. The index is
     pandas.Timestamps and the columns is generic names, corresponding to
-    weights.columns or if dicts are given then the columns consist of the dict
-    keys concatened with the columns of the values.
+    weights.columns
 
     Examples
     --------
@@ -97,11 +96,10 @@ def calc_rets(returns, weights):
             group_rets = (rets * wts.loc[:, generic]).groupby(level=0)
             grets.append(group_rets.apply(pd.DataFrame.sum, skipna=False))
 
-        if ast == "":
-            cols.extend(wts.columns.tolist())
-        else:
-            cols.extend([ast + str(i) for i in wts.columns.tolist()])
+        cols.extend(wts.columns.tolist())
 
+    if len(set(cols)) != len(cols):
+        raise ValueError("Columns for weights must all be unique")
     rets = pd.concat(grets, axis=1, keys=cols)
     rets = rets.loc[:, rets.columns.sort_values()]
     return rets
@@ -120,10 +118,11 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
     ----------
     current_contracts: pandas.Series
         Series of current number of contracts held for tradeable instruments.
+        Can pass 0 if all holdings are 0.
     desired_holdings: pandas.Series
         Series of desired holdings in base notional currency of generics. Index
         is generic contracts, these should be the same generics as in weights.
-    weights: pandas.DataFrame
+    weights: pandas.DataFrame or dict
         A pandas.DataFrame of loadings of generic contracts on tradeable
         instruments for a given date. The columns are integers refering to
         generic number indexed from 0, e.g. [0, 1], and the index is strings
