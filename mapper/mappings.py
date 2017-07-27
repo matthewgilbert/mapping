@@ -199,7 +199,9 @@ def to_generics(instruments, weights):
     solution is given by x = [19.5, 21.5], and in scenario 3 the solution is
     given by x = [22, 24].
 
-    NOTE: Integer solutions are not guruanteed, as demonstrated above.
+    NOTE: Integer solutions are not guruanteed, as demonstrated above. This is
+    intended for use with contract numbers but can also be used with notional
+    amounts of contracts.
 
     Parameters
     ----------

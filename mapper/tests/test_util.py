@@ -423,3 +423,39 @@ class TestUtil(unittest.TestCase):
 
         exp_trades = pd.Series([20, 18], index=['CLX16', 'CLZ16'])
         assert_series_equal(trades, exp_trades)
+
+    def test_get_multiplier_dataframe_weights(self):
+        wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
+                           index=["CLX16", "CLZ16", "CLF17"],
+                           columns=[0, 1])
+        ast_mult = pd.Series([1000], index=["CL"])
+
+        imults = util.get_multiplier(wts, ast_mult)
+        imults_exp = pd.Series([1000, 1000, 1000],
+                               index=["CLF17", "CLX16", "CLZ16"])
+        assert_series_equal(imults, imults_exp)
+
+    def test_get_multiplier_dict_weights(self):
+        wts1 = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
+                            index=["CLX16", "CLZ16", "CLF17"],
+                            columns=[0, 1])
+        wts2 = pd.DataFrame([0.5, 0.5], index=["COX16", "COZ16"], columns=[0])
+        wts = {"CL": wts1, "CO": wts2}
+        ast_mult = pd.Series([1000, 1000], index=["CL", "CO"])
+
+        imults = util.get_multiplier(wts, ast_mult)
+        imults_exp = pd.Series([1000, 1000, 1000, 1000, 1000],
+                               index=["CLF17", "CLX16", "CLZ16", "COX16",
+                                      "COZ16"])
+        assert_series_equal(imults, imults_exp)
+
+    def test_get_multiplier_dataframe_weights_multiplier_asts_error(self):
+        wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
+                           index=["CLX16", "CLZ16", "CLF17"],
+                           columns=[0, 1])
+        ast_mult = pd.Series([1000, 1000], index=["CL", "CO"])
+
+        def format_mismatch():
+            util.get_multiplier(wts, ast_mult)
+
+        self.assertRaises(ValueError, format_mismatch)

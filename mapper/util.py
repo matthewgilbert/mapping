@@ -124,7 +124,7 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
         is generic contracts, these should be the same generics as in weights.
     weights: pandas.DataFrame or dict
         A pandas.DataFrame of loadings of generic contracts on tradeable
-        instruments for a given date. The columns are integers refering to
+        instruments **for a given date**. The columns are integers refering to
         generic number indexed from 0, e.g. [0, 1], and the index is strings
         representing instrument names. If dict is given keys should be generic
         instrument names, e.g. 'CL', and values should be pandas.DataFrames of
@@ -192,7 +192,8 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
 def to_notional(instruments, prices, desired_ccy=None, instr_fx=None,
                 fx_rates=None, multipliers=None):
     """
-    Convert number of instruments to notional value in a desired currency.
+    Convert number of tradeable instruments to notional value in a desired
+    currency.
 
     Parameters
     ----------
@@ -233,8 +234,8 @@ def to_notional(instruments, prices, desired_ccy=None, instr_fx=None,
 def to_contracts(instruments, prices, desired_ccy=None, instr_fx=None,
                  fx_rates=None, multipliers=None):
     """
-    Convert notional amount of instruments to number of instrument contracts,
-    rounding to nearest integer number of contracts.
+    Convert notional amount of tradeable instruments to number of instrument
+    contracts, rounding to nearest integer number of contracts.
 
     Parameters
     ----------
@@ -298,6 +299,57 @@ def _instr_conv(instruments, prices, to_notional, desired_ccy, instr_fx,
     amounts = amounts.loc[instruments.index]
 
     return amounts
+
+
+def get_multiplier(weights, asset_multiplier):
+    """
+    Determine tradeable instrument multiplier based on generic asset
+    multipliers and weights mapping from generics to tradeables.
+
+    Parameters
+    ----------
+    weights: pandas.DataFrame or dict
+        A pandas.DataFrame of loadings of generic contracts on tradeable
+        instruments **for a given date**. The columns are integers refering to
+        generic number indexed from 0, e.g. [0, 1], and the index is strings
+        representing instrument names. If dict is given keys should be generic
+        instrument names, e.g. 'CL', and values should be pandas.DataFrames of
+        loadings. The union of all indexes should be a superset of the
+        instruments.index
+    asset_multiplier: pandas.Series
+        Series of multipliers for generic instruments lexigraphically sorted.
+        If a dictionary of weights is given, asset_multiplier.index should
+        correspond to the weights keys.
+
+    Returns
+    -------
+    A pandas.Series of multipliers for tradeable instruments.
+
+    Examples
+    --------
+    >>> wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
+    ...                    index=["CLX16", "CLZ16", "CLF17"],
+    ...                    columns=[0, 1])
+    >>> ast_mult = pd.Series([1000], index=["CL"])
+    >>> util.get_multiplier(wts, ast_mult)
+    """
+    if len(asset_multiplier) > 1 and not isinstance(weights, dict):
+        raise ValueError("For multiple generic instruments weights must be a "
+                         "dictionary")
+
+    mults = []
+    intrs = []
+    for ast, multiplier in asset_multiplier.iteritems():
+        if isinstance(weights, dict):
+            weights_ast = weights[ast].index
+        else:
+            weights_ast = weights.index
+        mults.extend(np.repeat(multiplier, len(weights_ast)))
+        intrs.extend(weights_ast)
+
+    imults = pd.Series(mults, intrs)
+    imults = imults.sort_index()
+    return imults
 
 
 def _get_fx_conversions(fx_rates, ccy, desired_ccy='USD'):
