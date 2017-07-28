@@ -172,7 +172,11 @@ def static_transition(timestamp, contract_dates, transition):
             else:
                 raise ValueError("transition.columns must contain "
                                  "'front' or 'back'")
-            cwts.append((gen_num, contracts[cntrct_idx], weighting, timestamp))
+            try:
+                cwts.append((gen_num, contracts[cntrct_idx], weighting, timestamp))  # NOQA
+            except IndexError as e:
+                import sys
+                raise type(e)(str(e) + ' happens at %s' % timestamp).with_traceback(sys.exc_info()[2])  # NOQA
 
     return cwts
 
