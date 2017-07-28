@@ -238,7 +238,7 @@ def to_notional(instruments, prices, multipliers, desired_ccy=None,
 
 
 def to_contracts(instruments, prices, multipliers, desired_ccy=None,
-                 instr_fx=None, fx_rates=None):
+                 instr_fx=None, fx_rates=None, floor=False):
     """
     Convert notional amount of tradeable instruments to number of instrument
     contracts, rounding to nearest integer number of contracts.
@@ -267,6 +267,8 @@ def to_contracts(instruments, prices, multipliers, desired_ccy=None,
         Series of fx rates used for conversion to desired_ccy. Index is strings
         representing the FX pair, e.g. 'AUDUSD' or 'USDCAD'. Values are the
         corresponding exchange rates.
+    floor: boolean
+        If True, use floor function instead of rounding.
 
     Returns
     -------
@@ -276,7 +278,10 @@ def to_contracts(instruments, prices, multipliers, desired_ccy=None,
 
     contracts = _instr_conv(instruments, prices, multipliers, False,
                             desired_ccy, instr_fx, fx_rates)
-    contracts = contracts.round()
+    if floor:
+        contracts = np.floor(contracts)
+    else:
+        contracts = contracts.round()
     contracts = contracts.astype(int)
     return contracts
 

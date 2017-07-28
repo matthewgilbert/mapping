@@ -267,6 +267,15 @@ class TestUtil(unittest.TestCase):
                                instr_fx=instr_fx, fx_rates=fx_rates)
         assert_series_equal(res, res_exp)
 
+    def test_to_contracts_floor(self):
+        prices = pd.Series([30.20, 30.5], index=['CLZ6', 'COZ6'])
+        multipliers = pd.Series([1, 1], index=['CLZ6', 'COZ6'])
+        # 30.19 / 30.20 is slightly less than 1 so will round to 0
+        notional = pd.Series([30.19, 2 * 30.5], index=['CLZ6', 'COZ6'])
+        res = util.to_contracts(notional, prices, multipliers, floor=True)
+        res_exp = pd.Series([0, 2], index=['CLZ6', 'COZ6'])
+        assert_series_equal(res, res_exp)
+
     def test_to_contract_different_fx_with_multiplier(self):
         notionals = pd.Series([-30.20, 2 * 30.5 / 1.32 * 10, 10.2 * 0.8 * 100],
                               index=['CLZ6', 'COZ6', 'GCZ6'])
