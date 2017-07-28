@@ -106,7 +106,7 @@ def calc_rets(returns, weights):
 
 
 def calc_trades(current_contracts, desired_holdings, weights, prices,
-                **kwargs):
+                multipliers, **kwargs):
     """
     Calculate the number of tradeable contracts for rebalancing from a set
     of current contract holdings to a set of desired generic notional holdings
@@ -132,7 +132,12 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
         instruments.index
     prices: pandas.Series
         Series of instrument prices. Index is instrument name and values are
-        number of contracts.
+        number of contracts. Extra instrument prices will be ignored.
+    multipliers: pandas.Series
+        Series of instrument multipliers. Index is instrument name and
+        values are the multiplier associated with the contract.
+        multipliers.index should be a superset of mapped desired_holdings
+        intruments.
     kwargs: key word arguments
         Key word arguments to be passed to to_contracts()
 
@@ -153,7 +158,7 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
     >>> multiplier = pd.Series([100, 100, 100],
     ...                        index=['CLX16', 'CLZ16', 'CLF17'])
     >>> trades = util.calc_trades(current_contracts, desired_holdings, wts,
-    ...                           prices, multipliers=multiplier)
+    ...                           prices, multipliers)
 
     """
     if not isinstance(weights, dict):
@@ -175,7 +180,8 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
         instr_des_hlds = ast_des_hlds * ast_weights
         instr_des_hlds = instr_des_hlds.sum(axis=1)
         wprices = prices.loc[instr_des_hlds.index]
-        des_cons.append(to_contracts(instr_des_hlds, wprices, **kwargs))
+        des_cons.append(to_contracts(instr_des_hlds, wprices, multipliers,
+                                     **kwargs))
 
     if len(unmapped_instr) > 0:
         raise KeyError("Unmapped desired_holdings %s. weights must be a "
@@ -189,8 +195,8 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
     return trades
 
 
-def to_notional(instruments, prices, desired_ccy=None, instr_fx=None,
-                fx_rates=None, multipliers=None):
+def to_notional(instruments, prices, multipliers, desired_ccy=None,
+                instr_fx=None, fx_rates=None):
     """
     Convert number of tradeable instruments to notional value in a desired
     currency.
@@ -203,7 +209,11 @@ def to_notional(instruments, prices, desired_ccy=None, instr_fx=None,
     prices: pandas.Series
         Series of instrument prices. Index is instrument name and values are
         instrument prices. prices.index should be a superset of
-        instruments.index
+        instruments.index otherwise NaN returned for instruments without prices
+    multipliers: pandas.Series
+        Series of instrument multipliers. Index is instrument name and
+        values are the multiplier associated with the contract.
+        multipliers.index should be a superset of instruments.index
     desired_ccy: str
         Three letter string representing desired currency to convert notional
         values to, e.g. 'USD'. If None is given currency conversion is ignored.
@@ -215,10 +225,6 @@ def to_notional(instruments, prices, desired_ccy=None, instr_fx=None,
         Series of fx rates used for conversion to desired_ccy. Index is strings
         representing the FX pair, e.g. 'AUDUSD' or 'USDCAD'. Values are the
         corresponding exchange rates.
-    multipliers: pandas.Series
-        Series of instrument multipliers. Index is instrument name and
-        values are the multiplier associated with the contract. If None is
-        given the multiplier is assumed to be 1.
 
     Returns
     -------
@@ -226,13 +232,13 @@ def to_notional(instruments, prices, desired_ccy=None, instr_fx=None,
     names
     """
 
-    notionals = _instr_conv(instruments, prices, True, desired_ccy,
-                            instr_fx, fx_rates, multipliers)
+    notionals = _instr_conv(instruments, prices, multipliers, True,
+                            desired_ccy, instr_fx, fx_rates)
     return notionals
 
 
-def to_contracts(instruments, prices, desired_ccy=None, instr_fx=None,
-                 fx_rates=None, multipliers=None):
+def to_contracts(instruments, prices, multipliers, desired_ccy=None,
+                 instr_fx=None, fx_rates=None):
     """
     Convert notional amount of tradeable instruments to number of instrument
     contracts, rounding to nearest integer number of contracts.
@@ -246,6 +252,10 @@ def to_contracts(instruments, prices, desired_ccy=None, instr_fx=None,
         Series of instrument prices. Index is instrument name and values are
         instrument prices. prices.index should be a superset of
         instruments.index
+    multipliers: pandas.Series
+        Series of instrument multipliers. Index is instrument name and
+        values are the multiplier associated with the contract.
+        multipliers.index should be a superset of instruments.index
     desired_ccy: str
         Three letter string representing desired currency to convert notional
         values to, e.g. 'USD'. If None is given currency conversion is ignored.
@@ -257,11 +267,6 @@ def to_contracts(instruments, prices, desired_ccy=None, instr_fx=None,
         Series of fx rates used for conversion to desired_ccy. Index is strings
         representing the FX pair, e.g. 'AUDUSD' or 'USDCAD'. Values are the
         corresponding exchange rates.
-    multipliers: pandas.Series
-        Series of instrument multipliers. Index is instrument name and
-        values are the multiplier associated with the contract. If None is
-        given the multiplier is assumed to be 1. multipliers.index should be a
-        superset of instruments.index
 
     Returns
     -------
@@ -269,15 +274,15 @@ def to_contracts(instruments, prices, desired_ccy=None, instr_fx=None,
     names
     """
 
-    contracts = _instr_conv(instruments, prices, False, desired_ccy,
-                            instr_fx, fx_rates, multipliers)
+    contracts = _instr_conv(instruments, prices, multipliers, False,
+                            desired_ccy, instr_fx, fx_rates)
     contracts = contracts.round()
     contracts = contracts.astype(int)
     return contracts
 
 
-def _instr_conv(instruments, prices, to_notional, desired_ccy, instr_fx,
-                fx_rates, multipliers):
+def _instr_conv(instruments, prices, multipliers, to_notional, desired_ccy,
+                instr_fx, fx_rates):
 
     if desired_ccy:
         prices = prices.loc[instr_fx.index]
@@ -287,9 +292,6 @@ def _instr_conv(instruments, prices, to_notional, desired_ccy, instr_fx,
         fx_adj_prices = prices * np.array(conv_rate)
     else:
         fx_adj_prices = prices
-
-    if multipliers is None:
-        multipliers = 1
 
     if to_notional:
         amounts = instruments * fx_adj_prices * multipliers

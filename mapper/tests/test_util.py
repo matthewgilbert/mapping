@@ -210,39 +210,51 @@ class TestUtil(unittest.TestCase):
                                  columns=['CL1'])
         assert_frame_equal(wrets, wrets_exp)
 
+    def test_to_notional_empty(self):
+        instrs = pd.Series()
+        prices = pd.Series()
+        multipliers = pd.Series()
+        res_exp = pd.Series()
+        res = util.to_notional(instrs, prices, multipliers)
+        assert_series_equal(res, res_exp)
+
     def test_to_notional_same_fx(self):
         instrs = pd.Series([-1, 2, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
         prices = pd.Series([30.20, 30.5, 10.2], index=['CLZ6', 'COZ6', 'GCZ6'])
+        multipliers = pd.Series([1, 1, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
 
         res_exp = pd.Series([-30.20, 2 * 30.5, 10.2],
                             index=['CLZ6', 'COZ6', 'GCZ6'])
 
-        res = util.to_notional(instrs, prices)
+        res = util.to_notional(instrs, prices, multipliers)
         assert_series_equal(res, res_exp)
 
     def test_to_notional_extra_prices(self):
         instrs = pd.Series([-1, 2, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
+        multipliers = pd.Series([1, 1, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
         prices = pd.Series([30.20, 30.5, 10.2, 13.1], index=['CLZ6', 'COZ6',
                                                              'GCZ6', 'extra'])
 
         res_exp = pd.Series([-30.20, 2 * 30.5, 10.2],
                             index=['CLZ6', 'COZ6', 'GCZ6'])
 
-        res = util.to_notional(instrs, prices)
+        res = util.to_notional(instrs, prices, multipliers)
         assert_series_equal(res, res_exp)
 
     def test_to_notional_missing_prices(self):
         instrs = pd.Series([-1, 2, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
+        multipliers = pd.Series([1, 1, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
         prices = pd.Series([30.20, 30.5], index=['CLZ6', 'COZ6'])
 
         res_exp = pd.Series([-30.20, 2 * 30.5, pd.np.NaN],
                             index=['CLZ6', 'COZ6', 'GCZ6'])
 
-        res = util.to_notional(instrs, prices)
+        res = util.to_notional(instrs, prices, multipliers)
         assert_series_equal(res, res_exp)
 
     def test_to_notional_different_fx(self):
         instrs = pd.Series([-1, 2, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
+        multipliers = pd.Series([1, 1, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
         prices = pd.Series([30.20, 30.5, 10.2], index=['CLZ6', 'COZ6', 'GCZ6'])
         instr_fx = pd.Series(['USD', 'CAD', 'AUD'],
                              index=['CLZ6', 'COZ6', 'GCZ6'])
@@ -251,24 +263,8 @@ class TestUtil(unittest.TestCase):
         res_exp = pd.Series([-30.20, 2 * 30.5 / 1.32, 10.2 * 0.8],
                             index=['CLZ6', 'COZ6', 'GCZ6'])
 
-        res = util.to_notional(instrs, prices, desired_ccy='USD',
+        res = util.to_notional(instrs, prices, multipliers, desired_ccy='USD',
                                instr_fx=instr_fx, fx_rates=fx_rates)
-        assert_series_equal(res, res_exp)
-
-    def test_to_notional_different_fx_with_multiplier(self):
-        instrs = pd.Series([-1, 2, 1], index=['CLZ6', 'COZ6', 'GCZ6'])
-        prices = pd.Series([30.20, 30.5, 10.2], index=['CLZ6', 'COZ6', 'GCZ6'])
-        instr_fx = pd.Series(['USD', 'CAD', 'AUD'],
-                             index=['CLZ6', 'COZ6', 'GCZ6'])
-        fx_rates = pd.Series([1.32, 0.8], index=['USDCAD', 'AUDUSD'])
-        multipliers = pd.Series([1, 10, 100], index=['CLZ6', 'COZ6', 'GCZ6'])
-
-        res_exp = pd.Series([-30.20, 2 * 30.5 / 1.32 * 10, 10.2 * 0.8 * 100],
-                            index=['CLZ6', 'COZ6', 'GCZ6'])
-
-        res = util.to_notional(instrs, prices, desired_ccy='USD',
-                               instr_fx=instr_fx, fx_rates=fx_rates,
-                               multipliers=multipliers)
         assert_series_equal(res, res_exp)
 
     def test_to_contract_different_fx_with_multiplier(self):
@@ -321,6 +317,18 @@ class TestUtil(unittest.TestCase):
         # 0 * 0.5 / (50.48*100) - 0,
 
         exp_trades = pd.Series([20, 19], index=['CLX16', 'CLZ16'])
+        assert_series_equal(trades, exp_trades)
+
+    def test_trade_all_zero_amount_return_empty(self):
+        wts = pd.DataFrame([1], index=["CLX16"], columns=[0])
+        desired_holdings = pd.Series([13], index=[0])
+        current_contracts = 0
+        prices = pd.Series([50.32], index=['CLX16'])
+        multiplier = pd.Series([100], index=['CLX16'])
+        trades = util.calc_trades(current_contracts, desired_holdings, wts,
+                                  prices, multipliers=multiplier)
+
+        exp_trades = pd.Series(dtype="int64")
         assert_series_equal(trades, exp_trades)
 
     def test_trade_one_asset(self):
@@ -376,9 +384,11 @@ class TestUtil(unittest.TestCase):
         desired_holdings = pd.Series([200000, 10000], index=["CL0", "CL1"])
         current_contracts = pd.Series([0], index=['CLX16'])
         prices = pd.Series([50.32], index=['CLX16'])
+        multipliers = pd.Series([1], index=['CLX16'])
 
         def extra_trade():
-            util.calc_trades(current_contracts, desired_holdings, wts, prices)
+            util.calc_trades(current_contracts, desired_holdings, wts, prices,
+                             multipliers)
 
         self.assertRaises(KeyError, extra_trade)
 
