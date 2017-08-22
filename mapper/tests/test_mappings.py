@@ -2,6 +2,7 @@ import unittest
 from mapper import mappings
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
+import numpy as np
 from pandas.tseries.offsets import BDay
 
 
@@ -72,6 +73,22 @@ class TestMappings(unittest.TestCase):
 
         wts = mappings.static_transition(ts, contract_dates, transition)
         wts_exp = [(0, 'CLZ16', 1.0, ts)]
+        self.assertEqual(wts, wts_exp)
+
+    def test_roll_with_holiday(self):
+        contract_dates = self.dates.iloc[-2:]
+        ts = pd.Timestamp("2016-11-17")
+        cols = pd.MultiIndex.from_product([[0], ['front', 'back']])
+        idx = [-2, -1, 0]
+        transition = pd.DataFrame([[1.0, 0.0], [0.5, 0.5], [0.0, 1.0]],
+                                  index=idx, columns=cols)
+
+        holidays = [np.datetime64("2016-11-18")]
+        # the holiday moves the roll schedule up one day, since Friday is
+        # excluded as a day
+        wts = mappings.static_transition(ts, contract_dates, transition,
+                                         holidays)
+        wts_exp = [(0, 'CLZ16', 0.5, ts), (0, 'CLF17', 0.5, ts)]
         self.assertEqual(wts, wts_exp)
 
     def test_aggregate_weights(self):

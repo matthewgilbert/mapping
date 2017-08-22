@@ -96,14 +96,15 @@ def aggregate_weights(weights, drop_date=False, generic=None):
     return dwts
 
 
-def static_transition(timestamp, contract_dates, transition):
+def static_transition(timestamp, contract_dates, transition, holidays=None):
     """
+    An implementation of *get_weights* parameter in roller().
     Return weights to tradeable instruments for a given date based on a
     transition DataFrame which indicates how to roll through the roll period.
 
     Parameters
     ----------
-    timestamp: pandas.DatetimeIndex
+    timestamp: pandas.Timestamp
         The timestamp to return instrument weights for
     contract_dates: pandas.Series
         Series with index of tradeable contract names and pandas.Timestamps
@@ -120,6 +121,9 @@ def static_transition(timestamp, contract_dates, transition):
         roll period. The first row of the transition period should be
         completely allocated to the front contract and the last row should be
         completely allocated to the back contract.
+    holidays: array_like of datetime64[D]
+        Holidays to exclude when calculating business day offsets from the last
+        roll date. See numpy.busday_count.
 
     Returns
     -------
@@ -142,12 +146,16 @@ def static_transition(timestamp, contract_dates, transition):
     >>> wts = mappings.static_transition(ts, contract_dates, transition)
     """
 
+    if not holidays:
+        holidays = []
+
     # further speedup can be obtained using contract_dates.loc[timestamp:]
     # but this requires swapping contract_dates index and values
     contract_dates = contract_dates.loc[contract_dates >= timestamp]
     contracts = contract_dates.index
     front_expiry_dt = contract_dates.iloc[0]
-    days_to_expiry = np.busday_count(front_expiry_dt, timestamp)
+    days_to_expiry = np.busday_count(front_expiry_dt, timestamp,
+                                     holidays=holidays)
 
     if days_to_expiry in transition.index:
         weights_iter = transition.loc[days_to_expiry].iteritems()
