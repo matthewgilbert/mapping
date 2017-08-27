@@ -3,7 +3,7 @@ import numpy as np
 import cvxpy
 
 
-def roller(timestamps, contract_dates, get_weights, generic=None, **kwargs):
+def roller(timestamps, contract_dates, get_weights, **kwargs):
     """
     Calculate weight allocations to tradeable instruments for generic futures
     at a set of timestamps.
@@ -20,16 +20,13 @@ def roller(timestamps, contract_dates, get_weights, generic=None, **kwargs):
         returns a list of tuples consisting of the generic instrument number as
         an int, the tradeable contract as a string, the weight on this contract
         as a float and the date as a pandas.Timestamp.
-    generic: str
-        A string which is preprended to the column generic numbers, e.g. "CL"
     kwargs: keyword arguments
         Arguements to pass to get_weights
 
     Return
     ------
-    A pandas.DataFrame with integer columns of generics starting from 0 or
-    strings of generics, e.g. "CL0", and a MultiIndex of date and contract.
-    Values represent weights on tradeables for each generic
+    A pandas.DataFrame with columns representing generics and a MultiIndex of
+    date and contract. Values represent weights on tradeables for each generic.
 
     Examples
     --------
@@ -53,12 +50,12 @@ def roller(timestamps, contract_dates, get_weights, generic=None, **kwargs):
     for ts in timestamps:
         weights.extend(get_weights(ts, contract_dates, **kwargs))
 
-    weights = aggregate_weights(weights, generic=generic)
+    weights = aggregate_weights(weights)
 
     return weights
 
 
-def aggregate_weights(weights, drop_date=False, generic=None):
+def aggregate_weights(weights, drop_date=False):
     """
     Transforms list of tuples of weights into pandas.DataFrame of weights.
 
@@ -70,16 +67,12 @@ def aggregate_weights(weights, drop_date=False, generic=None):
         float and the date as a pandas.Timestamp.
     drop_date: boolean
         Whether to drop the date from the multiIndex
-    generic: str
-        A string which is prepended to the column generic numbers, e.g. "CL"
 
     Returns
     -------
     A pandas.DataFrame of loadings of generic contracts on tradeable
-    instruments for a given date. The columns are integers refering to
-    generic number indexed from 0, e.g. [0, 1], or if generic is given they are
-    generic strings, e.g. ["CL0", "CL1"], and the index is strings
-    representing instrument names.
+    instruments for a given date. The columns are generic instrument names and
+    the index is strings representing instrument names.
     """
     dwts = pd.DataFrame(weights,
                         columns=["generic", "contract", "weight", "date"])
@@ -89,10 +82,6 @@ def aggregate_weights(weights, drop_date=False, generic=None):
     dwts = dwts.sort_index()
     if drop_date:
         dwts.index = dwts.index.levels[-1]
-    if generic:
-        nm = dwts.columns.name
-        dwts.columns = generic + dwts.columns.astype(str)
-        dwts.columns.name = nm
     return dwts
 
 
@@ -112,15 +101,14 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
     transition: pandas.DataFrame
         A DataFrame with a index of integers representing business day offsets
         from the last roll date and a column which is a MultiIndex where the
-        top level is integers representing generic instruments starting from 0
-        and the second level is ['front', 'back'] which refer to the front
-        month contract and the back month contract of the roll. Note that for
-        different generics, e.g. CL1, CL2, the front and back month
-        contract during a roll would refer to different underlying instruments.
-        The values represent the fraction of the roll on each day during the
-        roll period. The first row of the transition period should be
-        completely allocated to the front contract and the last row should be
-        completely allocated to the back contract.
+        top level is generic instruments and the second level is
+        ['front', 'back'] which refer to the front month contract and the back
+        month contract of the roll. Note that for different generics, e.g. CL1,
+        CL2, the front and back month contract during a roll would refer to
+        different underlying instruments. The values represent the fraction of
+        the roll on each day during the roll period. The first row of the
+        transition period should be completely allocated to the front contract
+        and the last row should be completely allocated to the back contract.
     holidays: array_like of datetime64[D]
         Holidays to exclude when calculating business day offsets from the last
         roll date. See numpy.busday_count.
@@ -133,7 +121,7 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
 
     Examples
     --------
-    >>> cols = pd.MultiIndex.from_product([[0, 1], ['front', 'back']])
+    >>> cols = pd.MultiIndex.from_product([["CL1", "CL2"], ['front', 'back']])
     >>> idx = [-2, -1, 0]
     >>> transition = pd.DataFrame([[1.0, 0.0, 1.0, 0.0], [0.5, 0.5, 0.5, 0.5],
     ...                            [0.0, 1.0, 0.0, 1.0]],
@@ -157,6 +145,8 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
     days_to_expiry = np.busday_count(front_expiry_dt, timestamp,
                                      holidays=holidays)
 
+    name2num = dict(zip(transition.columns.levels[0],
+                        range(len(transition.columns.levels[0]))))
     if days_to_expiry in transition.index:
         weights_iter = transition.loc[days_to_expiry].iteritems()
     # roll hasn't started yet
@@ -171,17 +161,17 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
 
     cwts = []
     for idx_tuple, weighting in weights_iter:
-        gen_num, position = idx_tuple
+        gen_name, position = idx_tuple
         if weighting != 0:
             if position == "front":
-                cntrct_idx = gen_num
+                cntrct_idx = name2num[gen_name]
             elif position == "back":
-                cntrct_idx = gen_num + 1
+                cntrct_idx = name2num[gen_name] + 1
             else:
                 raise ValueError("transition.columns must contain "
                                  "'front' or 'back'")
             try:
-                cwts.append((gen_num, contracts[cntrct_idx], weighting, timestamp))  # NOQA
+                cwts.append((gen_name, contracts[cntrct_idx], weighting, timestamp))  # NOQA
             except IndexError as e:
                 import sys
                 raise type(e)(str(e) + ' happens at %s' % timestamp).with_traceback(sys.exc_info()[2])  # NOQA
@@ -200,7 +190,7 @@ def to_generics(instruments, weights):
     Scenarios with exact solutions and non exact solutions are depicted below
 
     +------------+-----+-----+ Instruments
-    | contract   |   0 |   1 | ------------------------------------
+    | contract   | CL1 | CL2 | ------------------------------------
     |------------+-----+-----| Scenario 1 | Scenario 2 | Scenario 3
     | CLX16      | 0.5 | 0   | 10         | 10         | 10
     | CLZ16      | 0.5 | 0.5 | 20         | 20         | 25
@@ -223,12 +213,11 @@ def to_generics(instruments, weights):
         held.
     weights: pandas.DataFrame or dict
         A pandas.DataFrame of loadings of generic contracts on tradeable
-        instruments for a given date. The columns are integers refering to
-        generic number indexed from 0, e.g. [0, 1], and the index is strings
-        representing instrument names. If dict is given keys should be generic
-        instrument names, e.g. 'CL', and values should be pandas.DataFrames of
-        loadings. The union of all indexes should be a superset of the
-        instruments.index
+        instruments for a given date. The columns are generic instruments
+        and the index is strings representing instrument names. If dict is
+        given keys should be root generic, e.g. 'CL', and values should be
+        pandas.DataFrames of loadings. The union of all indexes should be a
+        superset of the instruments.index
 
     Returns
     -------
@@ -239,7 +228,7 @@ def to_generics(instruments, weights):
     --------
     >>> wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
     ...                    index=["CLX16", "CLZ16", "CLF17"],
-    ...                    columns=[0, 1])
+    ...                    columns=["CL1", "CL2"])
     >>> instrs = pd.Series([10, 20, 10], index=["CLX16", "CLZ16", "CLF17"])
     >>> generics = mappings.to_generics(instrs, wts)
     """

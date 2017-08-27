@@ -52,8 +52,8 @@ def calc_rets(returns, weights):
         A DataFrame of instrument weights with a MultiIndex where the top level
         contains pandas.Timestamps and the second level is instrument names.
         The columns consist of generic names. If dict is given this should be
-        a dict of pandas.Series in the above format, with keys for different
-        assets, e.g. 'CL'
+        a dict of pandas.DataFrame in the above format, with keys for different
+        root generics, e.g. 'CL'
 
     Returns
     -------
@@ -75,7 +75,7 @@ def calc_rets(returns, weights):
     ...                                   (pd.Timestamp('2015-01-04'), 'CLF5'),
     ...                                   (pd.Timestamp('2015-01-04'), 'CLG5'),
     ...                                   (pd.Timestamp('2015-01-05'), 'CLG5')])
-    >>> weights = pd.DataFrame(vals, index=widx, columns=[0])
+    >>> weights = pd.DataFrame(vals, index=widx, columns=["CL1"])
     >>> irets = price.groupby(level=-1).pct_change()
     >>> util.calc_rets(irets, weights)
     """  # NOQA
@@ -105,7 +105,7 @@ def calc_rets(returns, weights):
     return rets
 
 
-def calc_trades(current_contracts, desired_holdings, weights, prices,
+def calc_trades(current_contracts, desired_holdings, trade_weights, prices,
                 multipliers, **kwargs):
     """
     Calculate the number of tradeable contracts for rebalancing from a set
@@ -121,15 +121,15 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
         Can pass 0 if all holdings are 0.
     desired_holdings: pandas.Series
         Series of desired holdings in base notional currency of generics. Index
-        is generic contracts, these should be the same generics as in weights.
-    weights: pandas.DataFrame or dict
+        is generic contracts, these should be the same generics as in
+        trade_weights.
+    trade_weights: pandas.DataFrame or dict
         A pandas.DataFrame of loadings of generic contracts on tradeable
-        instruments **for a given date**. The columns are integers refering to
-        generic number indexed from 0, e.g. [0, 1], and the index is strings
-        representing instrument names. If dict is given keys should be generic
-        instrument names, e.g. 'CL', and values should be pandas.DataFrames of
-        loadings. The union of all indexes should be a superset of the
-        instruments.index
+        instruments **for a given date**. The columns refer to generic
+        contracts and the index is strings representing instrument names.
+        If dict is given keys should be root generic names, e.g. 'CL', and
+        values should be pandas.DataFrames of loadings. The union of all
+        columns should be a superset of the desired_holdings.index
     prices: pandas.Series
         Series of instrument prices. Index is instrument name and values are
         number of contracts. Extra instrument prices will be ignored.
@@ -149,25 +149,24 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
     -------
     >>> wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
     ...                    index=["CLX16", "CLZ16", "CLF17"],
-    ...                    columns=[0, 1])
-    >>> desired_holdings = pd.Series([200000, -50000], index=[0, 1])
+    ...                    columns=["CL1", "CL2"])
+    >>> desired_holdings = pd.Series([200000, -50000], index=["CL1", "CL2"])
     >>> current_contracts = pd.Series([0, 1, 0],
     ...                               index=['CLX16', 'CLZ16', 'CLF17'])
     >>> prices = pd.Series([50.32, 50.41, 50.48],
     ...                    index=['CLX16', 'CLZ16', 'CLF17'])
-    >>> multiplier = pd.Series([100, 100, 100],
+    >>> multipliers = pd.Series([100, 100, 100],
     ...                        index=['CLX16', 'CLZ16', 'CLF17'])
     >>> trades = util.calc_trades(current_contracts, desired_holdings, wts,
     ...                           prices, multipliers)
-
     """
-    if not isinstance(weights, dict):
-        weights = {"": weights}
+    if not isinstance(trade_weights, dict):
+        trade_weights = {"": trade_weights}
 
     unmapped_instr = desired_holdings.index
     des_cons = []
-    for ast in weights:
-        ast_weights = weights[ast]
+    for ast in trade_weights:
+        ast_weights = trade_weights[ast]
 
         # allow weights to be a superset of desired holdings, and make sure
         # every holding has been mapped
@@ -184,7 +183,7 @@ def calc_trades(current_contracts, desired_holdings, weights, prices,
                                      **kwargs))
 
     if len(unmapped_instr) > 0:
-        raise KeyError("Unmapped desired_holdings %s. weights must be a "
+        raise KeyError("Unmapped desired_holdings %s. trade_weights must be a "
                        "superset of instruments" % unmapped_instr.tolist())
 
     des_cons = pd.concat(des_cons, axis=0)
