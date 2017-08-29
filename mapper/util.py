@@ -267,7 +267,7 @@ def to_contracts(instruments, prices, multipliers, desired_ccy=None,
         representing the FX pair, e.g. 'AUDUSD' or 'USDCAD'. Values are the
         corresponding exchange rates.
     rounder: function
-        Function to round contracts to integers, if None default
+        Function to round pd.Series contracts to integers, if None default
         pd.Series.round is used.
 
     Returns

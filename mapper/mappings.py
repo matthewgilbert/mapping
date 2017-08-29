@@ -30,7 +30,7 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
 
     Examples
     --------
-    >>> cols = pd.MultiIndex.from_product([[0, 1], ['front', 'back']])
+    >>> cols = pd.MultiIndex.from_product([["CL1", "CL2"], ['front', 'back']])
     >>> idx = [-2, -1, 0]
     >>> trans = pd.DataFrame([[1.0, 0.0, 1.0, 0.0], [0.5, 0.5, 0.5, 0.5],
     ...                       [0.0, 1.0, 0.0, 1.0]], index=idx, columns=cols)
