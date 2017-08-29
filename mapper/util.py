@@ -237,7 +237,7 @@ def to_notional(instruments, prices, multipliers, desired_ccy=None,
 
 
 def to_contracts(instruments, prices, multipliers, desired_ccy=None,
-                 instr_fx=None, fx_rates=None, floor=False):
+                 instr_fx=None, fx_rates=None, rounder=None):
     """
     Convert notional amount of tradeable instruments to number of instrument
     contracts, rounding to nearest integer number of contracts.
@@ -266,8 +266,9 @@ def to_contracts(instruments, prices, multipliers, desired_ccy=None,
         Series of fx rates used for conversion to desired_ccy. Index is strings
         representing the FX pair, e.g. 'AUDUSD' or 'USDCAD'. Values are the
         corresponding exchange rates.
-    floor: boolean
-        If True, use floor function instead of rounding.
+    rounder: function
+        Function to round contracts to integers, if None default
+        pd.Series.round is used.
 
     Returns
     -------
@@ -277,10 +278,10 @@ def to_contracts(instruments, prices, multipliers, desired_ccy=None,
 
     contracts = _instr_conv(instruments, prices, multipliers, False,
                             desired_ccy, instr_fx, fx_rates)
-    if floor:
-        contracts = np.floor(contracts)
-    else:
-        contracts = contracts.round()
+    if rounder is None:
+        rounder = pd.Series.round
+
+    contracts = rounder(contracts)
     contracts = contracts.astype(int)
     return contracts
 
@@ -307,7 +308,7 @@ def _instr_conv(instruments, prices, multipliers, to_notional, desired_ccy,
     return amounts
 
 
-def get_multiplier(weights, asset_multiplier):
+def get_multiplier(weights, root_generic_multiplier):
     """
     Determine tradeable instrument multiplier based on generic asset
     multipliers and weights mapping from generics to tradeables.
@@ -322,10 +323,10 @@ def get_multiplier(weights, asset_multiplier):
         instrument names, e.g. 'CL', and values should be pandas.DataFrames of
         loadings. The union of all indexes should be a superset of the
         instruments.index
-    asset_multiplier: pandas.Series
+    root_generic_multiplier: pandas.Series
         Series of multipliers for generic instruments lexigraphically sorted.
-        If a dictionary of weights is given, asset_multiplier.index should
-        correspond to the weights keys.
+        If a dictionary of weights is given, root_generic_multiplier.index
+        should correspond to the weights keys.
 
     Returns
     -------
@@ -339,13 +340,13 @@ def get_multiplier(weights, asset_multiplier):
     >>> ast_mult = pd.Series([1000], index=["CL"])
     >>> util.get_multiplier(wts, ast_mult)
     """
-    if len(asset_multiplier) > 1 and not isinstance(weights, dict):
+    if len(root_generic_multiplier) > 1 and not isinstance(weights, dict):
         raise ValueError("For multiple generic instruments weights must be a "
                          "dictionary")
 
     mults = []
     intrs = []
-    for ast, multiplier in asset_multiplier.iteritems():
+    for ast, multiplier in root_generic_multiplier.iteritems():
         if isinstance(weights, dict):
             weights_ast = weights[ast].index
         else:
