@@ -163,32 +163,37 @@ def calc_trades(current_contracts, desired_holdings, trade_weights, prices,
     if not isinstance(trade_weights, dict):
         trade_weights = {"": trade_weights}
 
-    unmapped_instr = desired_holdings.index
-    des_cons = []
-    for ast in trade_weights:
-        ast_weights = trade_weights[ast]
+    generics = []
+    for key in trade_weights:
+        generics.extend(trade_weights[key].columns)
 
-        # allow weights to be a superset of desired holdings, and make sure
-        # every holding has been mapped
-        ast_des_hlds = desired_holdings.loc[ast_weights.columns].dropna()
-        ast_weights = ast_weights.loc[:, ast_des_hlds.index]
+    if not set(desired_holdings.index).issubset(set(generics)):
+        raise ValueError("'desired_holdings.index' contains values which "
+                         "cannot be mapped to tradeables.\n"
+                         "Received: 'desired_holdings.index'\n {0}\n"
+                         "Expected in 'trade_weights' set of columns:\n {1}\n"
+                         .format(sorted(desired_holdings.index),
+                                 sorted(generics)))
+
+    desired_contracts = []
+    for root_key in trade_weights:
+        gnrc_weights = trade_weights[root_key]
+
+        subset = gnrc_weights.columns.intersection(desired_holdings.index)
+        gnrc_des_hlds = desired_holdings.loc[subset]
+        gnrc_weights = gnrc_weights.loc[:, subset]
         # drop indexes where all non zero weights were in columns dropped above
-        ast_weights = ast_weights.loc[~(ast_weights == 0).all(axis=1)]
-        unmapped_instr = unmapped_instr.difference(ast_des_hlds.index)
+        gnrc_weights = gnrc_weights.loc[~(gnrc_weights == 0).all(axis=1)]
 
-        instr_des_hlds = ast_des_hlds * ast_weights
+        instr_des_hlds = gnrc_des_hlds * gnrc_weights
         instr_des_hlds = instr_des_hlds.sum(axis=1)
         wprices = prices.loc[instr_des_hlds.index]
-        des_cons.append(to_contracts(instr_des_hlds, wprices, multipliers,
-                                     **kwargs))
+        desired_contracts.append(to_contracts(instr_des_hlds, wprices,
+                                              multipliers, **kwargs))
 
-    if len(unmapped_instr) > 0:
-        raise KeyError("Unmapped desired_holdings %s. trade_weights must be a "
-                       "superset of instruments" % unmapped_instr.tolist())
+    desired_contracts = pd.concat(desired_contracts, axis=0)
 
-    des_cons = pd.concat(des_cons, axis=0)
-
-    trades = des_cons.subtract(current_contracts, fill_value=0)
+    trades = desired_contracts.subtract(current_contracts, fill_value=0)
     trades = trades.loc[trades != 0]
     trades = trades.sort_index()
     return trades

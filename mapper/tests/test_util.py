@@ -400,7 +400,7 @@ class TestUtil(unittest.TestCase):
             util.calc_trades(current_contracts, desired_holdings, wts, prices,
                              multipliers)
 
-        self.assertRaises(KeyError, extra_trade)
+        self.assertRaises(ValueError, extra_trade)
 
     def test_trade_extra_desired_holdings_without_current_contracts(self):
         # this should treat the missing holdings as 0, since this would often
