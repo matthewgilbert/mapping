@@ -17,8 +17,8 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
         representing the last date of the roll as values
     get_weights: function
         A function which takes in a timestamp, contract_dates and **kwargs and
-        returns a list of tuples consisting of the generic instrument number as
-        an int, the tradeable contract as a string, the weight on this contract
+        returns a list of tuples consisting of the generic instrument name,
+        the tradeable contract as a string, the weight on this contract
         as a float and the date as a pandas.Timestamp.
     kwargs: keyword arguments
         Arguements to pass to get_weights
@@ -115,9 +115,9 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
 
     Returns
     -------
-    A list of tuples consisting of the generic instrument number as an int,
-    the tradeable contract as a string, the weight on this contract as a float
-    and the date as a pandas.Timestamp.
+    A list of tuples consisting of the generic instrument name, the tradeable
+    contract as a string, the weight on this contract as a float and the date
+    as a pandas.Timestamp.
 
     Examples
     --------
