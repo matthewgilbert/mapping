@@ -31,13 +31,20 @@ class TestMappings(unittest.TestCase):
         idx = [-2, -1, 0]
         trans = pd.DataFrame([[1.0, 0.0], [0.5, 0.5], [0.0, 1.0]],
                              index=idx, columns=cols)
-        wts = mappings.roller(timestamps, contract_dates,
-                              mappings.static_transition, transition=trans)
 
         midx = pd.MultiIndex.from_product([timestamps, ['CLX16']])
         midx.names = ['date', 'contract']
         cols = pd.Index([0], name='generic')
         wts_exp = pd.DataFrame([1.0, 1.0], index=midx, columns=cols)
+
+        # with DatetimeIndex
+        wts = mappings.roller(timestamps, contract_dates,
+                              mappings.static_transition, transition=trans)
+        assert_frame_equal(wts, wts_exp)
+
+        # with tuple
+        wts = mappings.roller(tuple(timestamps), contract_dates,
+                              mappings.static_transition, transition=trans)
         assert_frame_equal(wts, wts_exp)
 
     def test_not_in_roll_one_generic_static_transition(self):

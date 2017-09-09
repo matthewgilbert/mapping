@@ -10,8 +10,8 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
 
     Paramters
     ---------
-    timestamps: pd.DatetimeIndex
-        Set of timestamps to calculate weights for
+    timestamps: iterable
+        Sorted iterable of of pandas.Timestamps to calculate weights for
     contract_dates: pandas.Series
         Series with index of tradeable contract names and pandas.Timestamps
         representing the last date of the roll as values
@@ -44,7 +44,7 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
     >>> wts = mappings.roller(ts, contract_dates, mappings.static_transition,
     ...                       transition=trans)
     """
-    timestamps = timestamps.sort_values()
+    timestamps = sorted(timestamps)
     contract_dates = contract_dates.sort_values()
     weights = []
     for ts in timestamps:
@@ -62,7 +62,7 @@ def aggregate_weights(weights, drop_date=False):
     Parameters:
     -----------
     weights: list
-        A list of tuples consisting of the generic instrument number as an int,
+        A list of tuples consisting of the generic instrument name,
         the tradeable contract as a string, the weight on this contract as a
         float and the date as a pandas.Timestamp.
     drop_date: boolean
@@ -139,9 +139,9 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
 
     # further speedup can be obtained using contract_dates.loc[timestamp:]
     # but this requires swapping contract_dates index and values
-    contract_dates = contract_dates.loc[contract_dates >= timestamp]
-    contracts = contract_dates.index
-    front_expiry_dt = contract_dates.iloc[0]
+    after_contract_dates = contract_dates.loc[contract_dates >= timestamp]
+    contracts = after_contract_dates.index
+    front_expiry_dt = after_contract_dates.iloc[0]
     days_to_expiry = np.busday_count(front_expiry_dt, timestamp,
                                      holidays=holidays)
 
@@ -174,7 +174,7 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
                 cwts.append((gen_name, contracts[cntrct_idx], weighting, timestamp))  # NOQA
             except IndexError as e:
                 import sys
-                raise type(e)(str(e) + ' happens at %s' % timestamp).with_traceback(sys.exc_info()[2])  # NOQA
+                raise type(e)(str(e) + ". No 'back' contract for %s\nInsufficient 'contract_dates', last row:\n%s" % (timestamp, contract_dates.iloc[[-1]])).with_traceback(sys.exc_info()[2])  # NOQA
 
     return cwts
 
