@@ -31,8 +31,8 @@ install:
   - python setup.py install
 
 script:
-  - flake8 mapper
-  - pytest mapper/tests -v --cov=mapper --cov-report term-missing
+  - flake8 mapping
+  - pytest mapping/tests -v --cov=mapping --cov-report term-missing
 
 after_success:
   - coveralls
