@@ -1,5 +1,5 @@
 import unittest
-from mapper import mappings
+from mapping import mappings
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
 import numpy as np

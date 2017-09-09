@@ -6,7 +6,7 @@ help:
 	@echo '     make test    run unit tests     '
 
 lint:
-	flake8 ./mapper
+	flake8 ./mapping
 
 test:
-	pytest mapper/tests -v --cov=mapper --cov-report term-missing
+	pytest mapping/tests -v --cov=mapping --cov-report term-missing

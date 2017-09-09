@@ -1,6 +1,6 @@
 import unittest
 import os
-from mapper import util
+from mapping import util
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
 
