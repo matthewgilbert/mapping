@@ -27,7 +27,8 @@ def read_price_data(files, name_func):
         name = name_func(f)
         df = pd.read_csv(f, index_col=0, parse_dates=True)
         df.sort_index(inplace=True)
-        df.index = pd.MultiIndex.from_product([df.index, [name]])
+        df.index = pd.MultiIndex.from_product([df.index, [name]],
+                                              names=["date", "contract"])
         dfs.append(df)
 
     return pd.concat(dfs, axis=0).sort_index()

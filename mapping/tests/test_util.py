@@ -26,7 +26,8 @@ class TestUtil(unittest.TestCase):
         dt1 = pd.Timestamp("2014-09-30")
         dt2 = pd.Timestamp("2014-10-01")
         idx = pd.MultiIndex.from_tuples([(dt1, "2014FVU"), (dt1, "2014FVZ"),
-                                         (dt2, "2014FVZ")])
+                                         (dt2, "2014FVZ")],
+                                        names=["date", "contract"])
         df_exp = pd.DataFrame([119.27344, 118.35938, 118.35938],
                               index=idx, columns=["Open"])
         assert_frame_equal(df, df_exp)
