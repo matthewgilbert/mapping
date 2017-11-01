@@ -134,6 +134,9 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
     >>> wts = mappings.static_transition(ts, contract_dates, transition)
     """
 
+    # required for MultiIndex slicing
+    _check_static(transition.sort_index(axis=1))
+
     if not holidays:
         holidays = []
 
@@ -167,9 +170,7 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
                 cntrct_idx = name2num[gen_name]
             elif position == "back":
                 cntrct_idx = name2num[gen_name] + 1
-            else:
-                raise ValueError("transition.columns must contain "
-                                 "'front' or 'back'")
+
             try:
                 cwts.append((gen_name, contracts[cntrct_idx], weighting, timestamp))  # NOQA
             except IndexError as e:
@@ -177,6 +178,24 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
                 raise type(e)(str(e) + ". No 'back' contract for %s\nInsufficient 'contract_dates', last row:\n%s" % (timestamp, contract_dates.iloc[[-1]])).with_traceback(sys.exc_info()[2])  # NOQA
 
     return cwts
+
+
+def _check_static(transition):
+    if set(transition.columns.levels[-1]) != {"front", "back"}:
+        raise ValueError("transition.columns.levels[-1] must consist of"
+                         "'front' and 'back'")
+
+    generic_row_sums = transition.groupby(level=0, axis=1).sum()
+    if not (generic_row_sums == 1).all().all():
+        raise ValueError("transition rows for each generic must sum to"
+                         " 1\n %s" % transition)
+
+    if not transition.loc[:, (slice(None), "front")].apply(lambda x: np.all(np.diff(x.values) <= 0)).all():  # NOQA
+        raise ValueError("'front' columns must be monotonically decreasing and"
+                         " 'back' columns must be monotonically increasing,"
+                         " invalid transtion:\n %s" % transition)
+
+    return
 
 
 def to_generics(instruments, weights):

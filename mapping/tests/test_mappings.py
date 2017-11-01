@@ -141,9 +141,11 @@ class TestMappings(unittest.TestCase):
         wts_exp = [(0, 'CLX16', 1.0, ts)]
         self.assertEqual(wts, wts_exp)
 
-    def test_static_bad_transition(self):
+    def test_static_bad_transitions(self):
         contract_dates = self.dates.iloc[[0]]
         ts = self.dates.iloc[0] + BDay(-8)
+
+        # transition does not contain 'front' column
         cols = pd.MultiIndex.from_product([[0], ['not_front', 'back']])
         idx = [-2, -1, 0]
         transition = pd.DataFrame([[1.0, 0.0], [0.5, 0.5], [0.0, 1.0]],
@@ -151,7 +153,23 @@ class TestMappings(unittest.TestCase):
 
         def bad_transition():
             mappings.static_transition(ts, contract_dates, transition)
+        self.assertRaises(ValueError, bad_transition)
 
+        # transition does not sum to one across rows
+        cols = pd.MultiIndex.from_product([[0], ['front', 'back']])
+        transition = pd.DataFrame([[1.0, 0.0], [0.5, 0.0], [0.0, 1.0]],
+                                  index=idx, columns=cols)
+
+        def bad_transition():
+            mappings.static_transition(ts, contract_dates, transition)
+        self.assertRaises(ValueError, bad_transition)
+
+        # transition is not monotonic increasing in back
+        transition = pd.DataFrame([[0.7, 0.3], [0.8, 0.2], [0.0, 1.0]],
+                                  index=idx, columns=cols)
+
+        def bad_transition():
+            mappings.static_transition(ts, contract_dates, transition)
         self.assertRaises(ValueError, bad_transition)
 
     def test_no_roll_date_two_generics_static_transition(self):
