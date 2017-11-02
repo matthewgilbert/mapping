@@ -3,6 +3,7 @@ import os
 from mapping import util
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
+import numpy as np
 
 
 class TestUtil(unittest.TestCase):
@@ -74,6 +75,34 @@ class TestUtil(unittest.TestCase):
         weights = pd.DataFrame(vals, index=widx, columns=['CL1', 'CL2'])
         wrets = util.calc_rets(rets, weights)
         wrets_exp = pd.DataFrame([[0.1, 0.15], [0.075, 0.45], [-0.5, 0.2]],
+                                 index=weights.index.levels[0],
+                                 columns=['CL1', 'CL2'])
+        assert_frame_equal(wrets, wrets_exp)
+
+    def test_calc_rets_two_generics_nans_in_second_generic(self):
+        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
+                                         (pd.Timestamp('2015-01-03'), 'CLG5'),
+                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
+                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
+                                         (pd.Timestamp('2015-01-04'), 'CLH5'),
+                                         (pd.Timestamp('2015-01-05'), 'CLG5'),
+                                         (pd.Timestamp('2015-01-05'), 'CLH5')])
+        rets = pd.Series([0.1, np.NaN, 0.05, 0.1, np.NaN, -0.5, 0.2],
+                         index=idx)
+        vals = [[1, 0], [0, 1],
+                [0.5, 0], [0.5, 0.5], [0, 0.5],
+                [1, 0], [0, 1]]
+        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
+                                          (pd.Timestamp('2015-01-03'), 'CLG5'),
+                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
+                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
+                                          (pd.Timestamp('2015-01-04'), 'CLH5'),
+                                          (pd.Timestamp('2015-01-05'), 'CLG5'),
+                                          (pd.Timestamp('2015-01-05'), 'CLH5')
+                                          ])
+        weights = pd.DataFrame(vals, index=widx, columns=['CL1', 'CL2'])
+        wrets = util.calc_rets(rets, weights)
+        wrets_exp = pd.DataFrame([[0.1, np.NaN], [0.075, np.NaN], [-0.5, 0.2]],
                                  index=weights.index.levels[0],
                                  columns=['CL1', 'CL2'])
         assert_frame_equal(wrets, wrets_exp)

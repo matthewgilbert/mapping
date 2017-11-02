@@ -86,15 +86,24 @@ def calc_rets(returns, weights):
     if not isinstance(weights, dict):
         weights = {"": weights}
 
+    for ast in weights:
+        if not weights[ast].columns.is_unique:
+            raise ValueError("'weights' DataFrames must have unique columns:\n"
+                             "%s" % weights[ast])
+
     grets = []
     cols = []
     for ast in returns:
         wts = weights[ast]
-        rets = returns[ast].loc[wts.index]
-
         for generic in wts.columns:
             # grouby time
-            group_rets = (rets * wts.loc[:, generic]).groupby(level=0)
+            wts_for_gnrc = wts.loc[:, generic]
+            # drop generics where weight is 0, this avoids potential NaN in
+            # later indexing of rets, causing a NaN for aggregate returns even
+            # when 0 weight
+            wts_for_gnrc = wts_for_gnrc.loc[wts_for_gnrc != 0]
+            rets = returns[ast].loc[wts_for_gnrc.index]
+            group_rets = (rets * wts_for_gnrc).groupby(level=0)
             grets.append(group_rets.apply(pd.DataFrame.sum, skipna=False))
 
         cols.extend(wts.columns.tolist())
