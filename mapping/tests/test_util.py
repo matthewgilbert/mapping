@@ -19,6 +19,18 @@ class TestUtil(unittest.TestCase):
 
     def test_read_price_data(self):
 
+        # using default name_func in read_price_data()
+        df = util.read_price_data(self.prices)
+        dt1 = pd.Timestamp("2014-09-30")
+        dt2 = pd.Timestamp("2014-10-01")
+        idx = pd.MultiIndex.from_tuples([(dt1, "CME-FVU2014"),
+                                         (dt1, "CME-FVZ2014"),
+                                         (dt2, "CME-FVZ2014")],
+                                        names=["date", "contract"])
+        df_exp = pd.DataFrame([119.27344, 118.35938, 118.35938],
+                              index=idx, columns=["Open"])
+        assert_frame_equal(df, df_exp)
+
         def name_func(fstr):
             name = fstr.split('-')[1].split('.')[0]
             return name[-4:] + name[:3]

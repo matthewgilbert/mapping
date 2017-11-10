@@ -17,6 +17,11 @@ The main features of `mapping` include:
 - creating time series of percentage allocations to tradeable contracts
 - creating instrument trade lists
 
+Currently there is no support for indexing/futures instrument rescaling, e.g.
+what happened to the VIX, discussed
+[here](http://cfe.cboe.com/publish/CFEinfocirc/CFEIC07-003%20.pdf). This should
+accounted for by rescaling the instrument data upstream of using `mapping`
+
 ## Details
 
 The mapping of instruments to and from generics is equivalent to solving the

@@ -1,8 +1,9 @@
 import pandas as pd
 import numpy as np
+import os
 
 
-def read_price_data(files, name_func):
+def read_price_data(files, name_func=None):
     """
     Convenience function for reading in pricing data from csv files
 
@@ -13,7 +14,9 @@ def read_price_data(files, name_func):
         column should be dates
     name_func: func
         A function to apply to the file strings to infer the instrument name,
-        used in the second level of the MultiIndex index.
+        used in the second level of the MultiIndex index. Default is the file
+        name excluding the pathname and file ending,
+        e.g. /path/to/file/name.csv -> name
 
     Returns
     -------
@@ -21,6 +24,9 @@ def read_price_data(files, name_func):
     pandas.Timestamps and the second level is instrument names. Columns are
     given by the csv file columns.
     """
+    if name_func is None:
+        def name_func(x):
+            return os.path.split(x)[1].split(".")[0]
 
     dfs = []
     for f in files:
