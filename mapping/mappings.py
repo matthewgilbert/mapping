@@ -263,6 +263,10 @@ def to_generics(instruments, weights):
         # holdings
         winstrs = instruments.loc[w.index].dropna()
         w = w.loc[winstrs.index]
+        # drop generics where all weights for instruments on the genric are 0.
+        # This avoids numerical rounding issues where solution has epsilon
+        # weight on a generic
+        w = w.loc[:, ~(w == 0).all()]
 
         unmapped_instr = unmapped_instr.difference(winstrs.index)
 

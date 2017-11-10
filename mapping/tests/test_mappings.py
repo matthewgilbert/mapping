@@ -324,6 +324,15 @@ class TestMappings(unittest.TestCase):
         exp_generics = pd.Series([20.0, -20.0], index=[0, 1])
         assert_series_equal(generics, exp_generics)
 
+    def test_to_generics_two_generics_zero_generics_weight(self):
+        # scenario where one generic has 0 weight, tests for bug where result
+        # has epsilon weight on CL1
+        wts = pd.DataFrame([[0, 1]], index=["CLZ16"], columns=["CL1", "CL2"])
+        notional = pd.Series([-13900.0], index=["CLZ16"])
+        generics = mappings.to_generics(notional, wts)
+        exp_generics = pd.Series([-13900.0], index=["CL2"])
+        assert_series_equal(generics, exp_generics)
+
     def test_to_generics_two_generics_minimize_error_non_integer_soln(self):
         wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
                            index=['CLX16', 'CLZ16', 'CLF17'],
