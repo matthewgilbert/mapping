@@ -521,3 +521,25 @@ class TestUtil(unittest.TestCase):
             util.get_multiplier(wts, ast_mult)
 
         self.assertRaises(ValueError, format_mismatch)
+
+    def test_weighted_expiration_two_generics(self):
+        vals = [[1, 0, 1/2, 1/2, 0, 1, 0], [0, 1, 0, 1/2, 1/2, 0, 1]]
+        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF15'),
+                                         (pd.Timestamp('2015-01-03'), 'CLG15'),
+                                         (pd.Timestamp('2015-01-04'), 'CLF15'),
+                                         (pd.Timestamp('2015-01-04'), 'CLG15'),
+                                         (pd.Timestamp('2015-01-04'), 'CLH15'),
+                                         (pd.Timestamp('2015-01-05'), 'CLG15'),
+                                         (pd.Timestamp('2015-01-05'), 'CLH15')])  # NOQA
+        weights = pd.DataFrame({"CL1": vals[0], "CL2": vals[1]}, index=idx)
+        contract_dates = pd.Series([pd.Timestamp('2015-01-20'),
+                                    pd.Timestamp('2015-02-21'),
+                                    pd.Timestamp('2015-03-20')],
+                                   index=['CLF15', 'CLG15', 'CLH15'])
+        wexp = util.weighted_expiration(weights, contract_dates)
+        exp_wexp = pd.DataFrame([[17.0, 49.0], [32.0, 61.5], [47.0, 74.0]],
+                                index=[pd.Timestamp('2015-01-03'),
+                                       pd.Timestamp('2015-01-04'),
+                                       pd.Timestamp('2015-01-05')],
+                                columns=["CL1", "CL2"])
+        assert_frame_equal(wexp, exp_wexp)

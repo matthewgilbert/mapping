@@ -380,6 +380,58 @@ def get_multiplier(weights, root_generic_multiplier):
     return imults
 
 
+def weighted_expiration(weights, contract_dates):
+    """
+    Calculate the days to expiration for generic futures, weighted by the
+    composition of the underlying tradeable instruments.
+
+    Parameters:
+    -----------
+    weights: pandas.DataFrame
+
+    contract_dates: pandas.Series
+        Series with index of tradeable contract names and pandas.Timestamps
+        representing the last date of the roll as values
+
+    Returns:
+    --------
+    A pandas.DataFrame with columns of generic futures and index of dates.
+    Values are the weighted average of days to expiration for the underlying
+    contracts.
+
+    Examples:
+    ---------
+    >>> vals = [[1, 0, 1/2, 1/2, 0, 1, 0], [0, 1, 0, 1/2, 1/2, 0, 1]]
+    >>> widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF15'),
+    ...                                   (pd.Timestamp('2015-01-03'), 'CLG15'),
+    ...                                   (pd.Timestamp('2015-01-04'), 'CLF15'),
+    ...                                   (pd.Timestamp('2015-01-04'), 'CLG15'),
+    ...                                   (pd.Timestamp('2015-01-04'), 'CLH15'),
+    ...                                   (pd.Timestamp('2015-01-05'), 'CLG15'),
+    ...                                   (pd.Timestamp('2015-01-05'), 'CLH15')])
+    >>> weights = pd.DataFrame({"CL1": vals[0], "CL2": vals[1]}, index=widx)
+    >>> contract_dates = pd.Series([pd.Timestamp('2015-01-20'),
+    ...                             pd.Timestamp('2015-02-21'),
+    ...                             pd.Timestamp('2015-03-20')],
+    ...                            index=['CLF15', 'CLG15', 'CLH15'])
+    >>> weighted_expiration(weights, contract_dates)
+    """  # NOQA
+    cols = weights.columns
+    weights = weights.reset_index(level=-1)
+    expiries = contract_dates.to_dict()
+    weights.loc[:, "expiry"] = weights.iloc[:, 0].apply(lambda x: expiries[x])
+    diffs = (pd.DatetimeIndex(weights.expiry)
+             - pd.Series(weights.index, weights.index))
+    weights = weights.loc[:, cols]
+    weights.loc[:, "diff"] = diffs.apply(lambda x: x.days)
+
+    def weighted_mult(group):
+        return group.drop("diff", axis=1).T.dot(group.loc[:, "diff"])
+
+    wexp = weights.groupby(level=0).apply(weighted_mult)
+    return wexp
+
+
 def _get_fx_conversions(fx_rates, ccy, desired_ccy='USD'):
     # return rate to multiply through by to convert from instrument ccy to
     # desired ccy
