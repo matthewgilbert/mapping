@@ -421,14 +421,9 @@ def weighted_expiration(weights, contract_dates):
     expiries = contract_dates.to_dict()
     weights.loc[:, "expiry"] = weights.iloc[:, 0].apply(lambda x: expiries[x])
     diffs = (pd.DatetimeIndex(weights.expiry)
-             - pd.Series(weights.index, weights.index))
+             - pd.Series(weights.index, weights.index)).apply(lambda x: x.days)
     weights = weights.loc[:, cols]
-    weights.loc[:, "diff"] = diffs.apply(lambda x: x.days)
-
-    def weighted_mult(group):
-        return group.drop("diff", axis=1).T.dot(group.loc[:, "diff"])
-
-    wexp = weights.groupby(level=0).apply(weighted_mult)
+    wexp = weights.mul(diffs, axis=0).groupby(level=0).sum()
     return wexp
 
 
