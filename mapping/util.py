@@ -251,7 +251,6 @@ def to_notional(instruments, prices, multipliers, desired_ccy=None,
     pandas.Series of notional amounts of instruments with Index of instruments
     names
     """
-
     notionals = _instr_conv(instruments, prices, multipliers, True,
                             desired_ccy, instr_fx, fx_rates)
     return notionals
@@ -296,7 +295,6 @@ def to_contracts(instruments, prices, multipliers, desired_ccy=None,
     pandas.Series of contract numbers of instruments with Index of instruments
     names
     """
-
     contracts = _instr_conv(instruments, prices, multipliers, False,
                             desired_ccy, instr_fx, fx_rates)
     if rounder is None:
@@ -310,7 +308,18 @@ def to_contracts(instruments, prices, multipliers, desired_ccy=None,
 def _instr_conv(instruments, prices, multipliers, to_notional, desired_ccy,
                 instr_fx, fx_rates):
 
+    if not instruments.index.is_unique:
+        raise ValueError("'instruments' must have unique index")
+    if not prices.index.is_unique:
+        raise ValueError("'prices' must have unique index")
+    if not multipliers.index.is_unique:
+        raise ValueError("'multipliers' must have unique index")
+
     if desired_ccy:
+        if not instr_fx.index.is_unique:
+            raise ValueError("'instr_fx' must have unique index")
+        if not fx_rates.index.is_unique:
+            raise ValueError("'fx_rates' must have unique index")
         prices = prices.loc[instr_fx.index]
         conv_rate = []
         for ccy in instr_fx.values:

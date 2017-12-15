@@ -309,6 +309,43 @@ class TestUtil(unittest.TestCase):
                                instr_fx=instr_fx, fx_rates=fx_rates)
         assert_series_equal(res, res_exp)
 
+    def test_to_notional_duplicates(self):
+        def duplicate_error(instrs, prices, mults, *args):
+            return util.to_notional(instrs, prices, mults, *args)
+
+        instrs = pd.Series([1, 1], index=['A', 'A'])
+        prices = pd.Series([200.37], index=['A'])
+        mults = pd.Series([100], index=['A'])
+        self.assertRaises(ValueError, duplicate_error, instrs, prices, mults)
+
+        instrs = pd.Series([1], index=['A'])
+        prices = pd.Series([200.37, 200.37], index=['A', 'A'])
+        mults = pd.Series([100], index=['A'])
+        self.assertRaises(ValueError, duplicate_error, instrs, prices, mults)
+
+        instrs = pd.Series([1], index=['A'])
+        prices = pd.Series([200.37], index=['A'])
+        mults = pd.Series([100, 100], index=['A', 'A'])
+        self.assertRaises(ValueError, duplicate_error, instrs, prices, mults)
+
+        instrs = pd.Series([1], index=['A'])
+        prices = pd.Series([200.37], index=['A'])
+        mults = pd.Series([100], index=['A'])
+        desired_ccy = "CAD"
+        instr_fx = pd.Series(['USD', 'USD'], index=['A', 'A'])
+        fx_rate = pd.Series([1.32], index=['USDCAD'])
+        self.assertRaises(ValueError, duplicate_error, instrs, prices, mults,
+                          desired_ccy, instr_fx, fx_rate)
+
+        instrs = pd.Series([1], index=['A'])
+        prices = pd.Series([200.37], index=['A'])
+        mults = pd.Series([100], index=['A'])
+        desired_ccy = "CAD"
+        instr_fx = pd.Series(['USD'], index=['A'])
+        fx_rate = pd.Series([1.32, 1.32], index=['USDCAD', 'USDCAD'])
+        self.assertRaises(ValueError, duplicate_error, instrs, prices, mults,
+                          desired_ccy, instr_fx, fx_rate)
+
     def test_to_contracts_rounder(self):
         prices = pd.Series([30.20, 30.5], index=['CLZ6', 'COZ6'])
         multipliers = pd.Series([1, 1], index=['CLZ6', 'COZ6'])
