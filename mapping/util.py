@@ -218,8 +218,8 @@ def calc_trades(current_contracts, desired_holdings, trade_weights, prices,
 def to_notional(instruments, prices, multipliers, desired_ccy=None,
                 instr_fx=None, fx_rates=None):
     """
-    Convert number of tradeable instruments to notional value in a desired
-    currency.
+    Convert number of contracts of tradeable instruments to notional value of
+    tradeable instruments in a desired currency.
 
     Parameters
     ----------
@@ -250,6 +250,13 @@ def to_notional(instruments, prices, multipliers, desired_ccy=None,
     -------
     pandas.Series of notional amounts of instruments with Index of instruments
     names
+
+    Example
+    -------
+    >>> current_contracts = pd.Series([-1, 1], index=['CLX16', 'CLZ16'])
+    >>> prices = pd.Series([50.32, 50.41], index=['CLX16', 'CLZ16'])
+    >>> multipliers = pd.Series([100, 100], index=['CLX16', 'CLZ16'])
+    >>> ntln = util.to_notional(current_contracts, prices, multipliers)
     """
     notionals = _instr_conv(instruments, prices, multipliers, True,
                             desired_ccy, instr_fx, fx_rates)
