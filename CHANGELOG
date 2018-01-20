@@ -1,3 +1,11 @@
- # mapping 0.1.0
+# mapping 0.1.0
 
- - initial release
+- initial release
+
+# mapping 0.1.1
+
+- added vix example
+- added validity checks for static transitions
+- added weighted_expiration() function for generics
+- unique index checking for to_contracts() and to_notional()
+- fix 0 weight in to_generics() resulting in epsilon holdings
