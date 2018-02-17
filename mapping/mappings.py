@@ -6,7 +6,7 @@ import cvxpy
 def roller(timestamps, contract_dates, get_weights, **kwargs):
     """
     Calculate weight allocations to tradeable instruments for generic futures
-    at a set of timestamps.
+    at a set of timestamps for a given root generic.
 
     Paramters
     ---------
@@ -14,7 +14,8 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
         Sorted iterable of of pandas.Timestamps to calculate weights for
     contract_dates: pandas.Series
         Series with index of tradeable contract names and pandas.Timestamps
-        representing the last date of the roll as values
+        representing the last date of the roll as values, sorted by values.
+        Index must be unique and values must be strictly monotonic.
     get_weights: function
         A function which takes in a timestamp, contract_dates and **kwargs and
         returns a list of tuples consisting of the generic instrument name,
@@ -46,6 +47,7 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
     """
     timestamps = sorted(timestamps)
     contract_dates = contract_dates.sort_values()
+    _check_contract_dates(contract_dates)
     weights = []
     for ts in timestamps:
         weights.extend(get_weights(ts, contract_dates, **kwargs))
@@ -98,6 +100,7 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
     contract_dates: pandas.Series
         Series with index of tradeable contract names and pandas.Timestamps
         representing the last date of the roll as values, sorted by values.
+        Index must be unique and values must be strictly monotonic.
     transition: pandas.DataFrame
         A DataFrame with a index of integers representing business day offsets
         from the last roll date and a column which is a MultiIndex where the
@@ -136,6 +139,9 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
 
     # required for MultiIndex slicing
     _check_static(transition.sort_index(axis=1))
+    # the algorithm below will return invalid results if contract_dates is not
+    # as expected so better to fail explicitly
+    _check_contract_dates(contract_dates)
 
     if not holidays:
         holidays = []
@@ -178,6 +184,18 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
                 raise type(e)(str(e) + ". No 'back' contract for %s\nInsufficient 'contract_dates', last row:\n%s" % (timestamp, contract_dates.iloc[[-1]])).with_traceback(sys.exc_info()[2])  # NOQA
 
     return cwts
+
+
+def _check_contract_dates(contract_dates):
+    if not contract_dates.index.is_unique:
+        raise ValueError("'contract_dates.index' must be unique")
+    if not contract_dates.is_unique:
+        raise ValueError("'contract_dates' must be unique")
+    # since from above we know this is unique if not monotonic means not
+    # strictly monotonic if we know it is sorted
+    if not contract_dates.is_monotonic_increasing:
+        raise ValueError("'contract_dates' must be strictly monotonic "
+                         "increasing")
 
 
 def _check_static(transition):

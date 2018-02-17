@@ -224,6 +224,33 @@ class TestMappings(unittest.TestCase):
 
         self.assertEqual(wts, wts_exp)
 
+    def test_invalid_contract_dates(self):
+        ts = [pd.Timestamp("2016-10-19")]
+        cols = pd.MultiIndex.from_product([[0, 1], ['front', 'back']])
+        idx = [-1, 0]
+        trans = pd.DataFrame([[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]],
+                             index=idx, columns=cols)
+
+        def call_invalid_contrs(ts, contract_dates):
+            return mappings.roller(ts, contract_dates,
+                                   mappings.static_transition,
+                                   transition=trans)
+
+        non_unique_index = pd.Series([pd.Timestamp('2016-10-20'),
+                                      pd.Timestamp('2016-11-21'),
+                                      pd.Timestamp('2016-12-20')],
+                                     index=['instr1', 'instr1', 'instr3'])
+        self.assertRaises(ValueError, call_invalid_contrs, ts,
+                          non_unique_index)
+
+        ts = [pd.Timestamp("2016-10-19"), pd.Timestamp("2016-10-20")]
+        non_monotonic_vals = pd.Series([pd.Timestamp('2016-10-20'),
+                                        pd.Timestamp('2016-10-20'),
+                                        pd.Timestamp('2016-12-20')],
+                                       index=['instr1', 'instr2', 'instr3'])
+        self.assertRaises(ValueError, call_invalid_contrs, ts,
+                          non_monotonic_vals)
+
     def test_during_roll_two_generics_one_day_static_roller(self):
         dt = self.dates.iloc[0]
         contract_dates = self.dates
