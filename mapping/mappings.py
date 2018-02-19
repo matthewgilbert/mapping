@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import cvxpy
+import sys
 
 
 def roller(timestamps, contract_dates, get_weights, **kwargs):
@@ -176,12 +177,15 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
                 cntrct_idx = name2num[gen_name]
             elif position == "back":
                 cntrct_idx = name2num[gen_name] + 1
-
             try:
-                cwts.append((gen_name, contracts[cntrct_idx], weighting, timestamp))  # NOQA
+                cntrct_name = contracts[cntrct_idx]
             except IndexError as e:
-                import sys
-                raise type(e)(str(e) + ". No 'back' contract for %s\nInsufficient 'contract_dates', last row:\n%s" % (timestamp, contract_dates.iloc[[-1]])).with_traceback(sys.exc_info()[2])  # NOQA
+                raise type(e)(("index {0} is out of bounds in\n{1}\nas of {2} "
+                               "resulting from {3} mapping")
+                              .format(cntrct_idx, after_contract_dates,
+                                      timestamp, idx_tuple)
+                              ).with_traceback(sys.exc_info()[2])
+            cwts.append((gen_name, cntrct_name, weighting, timestamp))
 
     return cwts
 
