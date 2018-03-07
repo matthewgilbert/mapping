@@ -114,3 +114,10 @@ You can pip install this package from github, i.e.
 ```
 pip install git+git://github.com/matthewgilbert/mapping.git@master
 ```
+
+`mapping` is also available on [PyPI](https://pypi.python.org/pypi/mapping),
+you can pip install the latest version using
+
+```
+pip install mapping
+```
