@@ -9,3 +9,9 @@
 - added weighted_expiration() function for generics
 - unique index checking for to_contracts() and to_notional()
 - fix 0 weight in to_generics() resulting in epsilon holdings
+
+# mapping 0.1.2
+
+- performance improvements for static_transition()
+- clarified static_transition() contract date indexing error
+- added sorted error checking for contract_dates input in static_transition()
