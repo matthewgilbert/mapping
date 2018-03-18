@@ -18,10 +18,10 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
         representing the last date of the roll as values, sorted by values.
         Index must be unique and values must be strictly monotonic.
     get_weights: function
-        A function which takes in a timestamp, contract_dates and **kwargs and
-        returns a list of tuples consisting of the generic instrument name,
-        the tradeable contract as a string, the weight on this contract
-        as a float and the date as a pandas.Timestamp.
+        A function which takes in a timestamp, contract_dates, validate_inputs
+        and **kwargs. Returns a list of tuples consisting of the generic
+        instrument name, the tradeable contract as a string, the weight on this
+        contract as a float and the date as a pandas.Timestamp.
     kwargs: keyword arguments
         Arguements to pass to get_weights
 
@@ -50,11 +50,18 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
     contract_dates = contract_dates.sort_values()
     _check_contract_dates(contract_dates)
     weights = []
-    for ts in timestamps:
-        weights.extend(get_weights(ts, contract_dates, **kwargs))
+    # for loop speedup only validate inputs the first function call to
+    # get_weights()
+    validate_inputs = True
+    ts = timestamps[0]
+    weights.extend(get_weights(ts, contract_dates,
+                               validate_inputs=validate_inputs, **kwargs))
+    validate_inputs = False
+    for ts in timestamps[1:]:
+        weights.extend(get_weights(ts, contract_dates,
+                                   validate_inputs=validate_inputs, **kwargs))
 
     weights = aggregate_weights(weights)
-
     return weights
 
 
@@ -88,7 +95,8 @@ def aggregate_weights(weights, drop_date=False):
     return dwts
 
 
-def static_transition(timestamp, contract_dates, transition, holidays=None):
+def static_transition(timestamp, contract_dates, transition, holidays=None,
+                      validate_inputs=True):
     """
     An implementation of *get_weights* parameter in roller().
     Return weights to tradeable instruments for a given date based on a
@@ -116,6 +124,11 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
     holidays: array_like of datetime64[D]
         Holidays to exclude when calculating business day offsets from the last
         roll date. See numpy.busday_count.
+    validate_inputs: Boolean
+        Whether or not to validate ordering of contract_dates and transition.
+        **Caution** this is provided for speed however if this is set to False
+        and inputs are not defined properly algorithm may return incorrect
+        data.
 
     Returns
     -------
@@ -138,11 +151,12 @@ def static_transition(timestamp, contract_dates, transition, holidays=None):
     >>> wts = mappings.static_transition(ts, contract_dates, transition)
     """
 
-    # required for MultiIndex slicing
-    _check_static(transition.sort_index(axis=1))
-    # the algorithm below will return invalid results if contract_dates is not
-    # as expected so better to fail explicitly
-    _check_contract_dates(contract_dates)
+    if validate_inputs:
+        # required for MultiIndex slicing
+        _check_static(transition.sort_index(axis=1))
+        # the algorithm below will return invalid results if contract_dates is
+        # not as expected so better to fail explicitly
+        _check_contract_dates(contract_dates)
 
     if not holidays:
         holidays = []
