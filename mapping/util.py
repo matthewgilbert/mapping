@@ -404,7 +404,9 @@ def weighted_expiration(weights, contract_dates):
     Parameters:
     -----------
     weights: pandas.DataFrame
-
+        A DataFrame of instrument weights with a MultiIndex where the top level
+        contains pandas.Timestamps and the second level is instrument names.
+        The columns consist of generic names.
     contract_dates: pandas.Series
         Series with index of tradeable contract names and pandas.Timestamps
         representing the last date of the roll as values
