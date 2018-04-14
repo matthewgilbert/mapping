@@ -18,8 +18,12 @@ class TestUtil(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_read_price_data(self):
+    def assert_dict_of_frames(self, dict1, dict2):
+        self.assertEquals(dict1.keys(), dict2.keys())
+        for key in dict1:
+            assert_frame_equal(dict1[key], dict2[key])
 
+    def test_read_price_data(self):
         # using default name_func in read_price_data()
         df = util.read_price_data(self.prices)
         dt1 = TS("2014-09-30")
@@ -581,3 +585,89 @@ class TestUtil(unittest.TestCase):
                                        TS('2015-01-05')],
                                 columns=["CL1", "CL2"])
         assert_frame_equal(wexp, exp_wexp)
+
+    def test_flatten(self):
+        vals = [[1, 0], [0, 1], [1, 0], [0, 1]]
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5')])
+        weights = pd.DataFrame(vals, index=widx, columns=["CL1", "CL2"])
+        flat_wts = util.flatten(weights)
+
+        flat_wts_exp = pd.DataFrame(
+            {"date": [TS('2015-01-03')] * 4 + [TS('2015-01-04')] * 4,
+             "contract": ['CLF5'] * 2 + ['CLG5'] * 4 + ['CLH5'] * 2,
+             "generic": ["CL1", "CL2"] * 4,
+             "weight": [1, 0, 0, 1, 1, 0, 0, 1]}
+        ).loc[:, ["date", "contract", "generic", "weight"]]
+        assert_frame_equal(flat_wts, flat_wts_exp)
+
+    def test_flatten_dict(self):
+        vals = [[1, 0], [0, 1], [1, 0], [0, 1]]
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5')])
+        weights1 = pd.DataFrame(vals, index=widx, columns=["CL1", "CL2"])
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'COF5')])
+        weights2 = pd.DataFrame(1, index=widx, columns=["CO1"])
+        weights = {"CL": weights1, "CO": weights2}
+        flat_wts = util.flatten(weights)
+        flat_wts_exp = pd.DataFrame(
+            {"date": ([TS('2015-01-03')] * 4 + [TS('2015-01-04')] * 4
+                      + [TS('2015-01-03')]),
+             "contract": (['CLF5'] * 2 + ['CLG5'] * 4 + ['CLH5'] * 2
+                          + ["COF5"]),
+             "generic": ["CL1", "CL2"] * 4 + ["CO1"],
+             "weight": [1, 0, 0, 1, 1, 0, 0, 1, 1],
+             "key": ["CL"] * 8 + ["CO"]}
+        ).loc[:, ["date", "contract", "generic", "weight", "key"]]
+        assert_frame_equal(flat_wts, flat_wts_exp)
+
+    def test_unflatten(self):
+        flat_wts = pd.DataFrame(
+            {"date": [TS('2015-01-03')] * 4 + [TS('2015-01-04')] * 4,
+             "contract": ['CLF5'] * 2 + ['CLG5'] * 4 + ['CLH5'] * 2,
+             "generic": ["CL1", "CL2"] * 4,
+             "weight": [1, 0, 0, 1, 1, 0, 0, 1]}
+        ).loc[:, ["date", "contract", "generic", "weight"]]
+        wts = util.unflatten(flat_wts)
+
+        vals = [[1, 0], [0, 1], [1, 0], [0, 1]]
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5')],
+                                         names=("date", "contract"))
+        cols = pd.Index(["CL1", "CL2"], name="generic")
+        wts_exp = pd.DataFrame(vals, index=widx, columns=cols)
+        assert_frame_equal(wts, wts_exp)
+
+    def test_unflatten_dict(self):
+        flat_wts = pd.DataFrame(
+            {"date": ([TS('2015-01-03')] * 4 + [TS('2015-01-04')] * 4
+                      + [TS('2015-01-03')]),
+             "contract": (['CLF5'] * 2 + ['CLG5'] * 4 + ['CLH5'] * 2
+                          + ["COF5"]),
+             "generic": ["CL1", "CL2"] * 4 + ["CO1"],
+             "weight": [1, 0, 0, 1, 1, 0, 0, 1, 1],
+             "key": ["CL"] * 8 + ["CO"]}
+        ).loc[:, ["date", "contract", "generic", "weight", "key"]]
+        wts = util.unflatten(flat_wts)
+
+        vals = [[1, 0], [0, 1], [1, 0], [0, 1]]
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5')],
+                                         names=("date", "contract"))
+        cols = pd.Index(["CL1", "CL2"], name="generic")
+        weights1 = pd.DataFrame(vals, index=widx, columns=cols)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'COF5')],
+                                         names=("date", "contract"))
+        cols = pd.Index(["CO1"], name="generic")
+        weights2 = pd.DataFrame(1, index=widx, columns=cols)
+        wts_exp = {"CL": weights1, "CO": weights2}
+
+        self.assert_dict_of_frames(wts, wts_exp)

@@ -40,6 +40,104 @@ def read_price_data(files, name_func=None):
     return pd.concat(dfs, axis=0).sort_index()
 
 
+def flatten(weights):
+    """
+    Flatten weights into a long DataFrame.
+
+    Parameters
+    ----------
+    weights: pandas.DataFrame or dict
+        A DataFrame of instrument weights with a MultiIndex where the top level
+        contains pandas. Timestamps and the second level is instrument names.
+        The columns consist of generic names. If dict is given this should be
+        a dict of pandas.DataFrame in the above format, with keys for different
+        root generics, e.g. 'CL'
+
+    Returns
+    -------
+    A long DataFrame of weights, where columns are "date", "contract",
+    "generic" and "weight". If a dictionary is passed, DataFrame will contain
+    additional colum "key" containing the key value and be sorted according to
+    this key value.
+
+    Example
+    -------
+    >>> vals = [[1, 0], [0, 1], [1, 0], [0, 1]]
+    >>> widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
+    ...                                   (pd.Timestamp('2015-01-03'), 'CLG5'),
+    ...                                   (pd.Timestamp('2015-01-04'), 'CLG5'),
+    ...                                   (pd.Timestamp('2015-01-04'), 'CLH5')])
+    >>> weights = pd.DataFrame(vals, index=widx, columns=["CL1", "CL2"])
+    >>> util.flatten(weights)
+    """  # NOQA
+    if isinstance(weights, pd.DataFrame):
+        wts = weights.stack().reset_index()
+        wts.columns = ["date", "contract", "generic", "weight"]
+    elif isinstance(weights, dict):
+        wts = []
+        for key in sorted(weights.keys()):
+            wt = weights[key].stack().reset_index()
+            wt.columns = ["date", "contract", "generic", "weight"]
+            wt.loc[:, "key"] = key
+            wts.append(wt)
+        wts = pd.concat(wts, axis=0).reset_index(drop=True)
+    else:
+        ValueError("weights must be pd.DataFrame or dict")
+
+    return wts
+
+
+def unflatten(flat_weights):
+    """
+    Pivot weights from long DataFrame into weighting matrix.
+
+    Parameters
+    ----------
+    flat_weights: pandas.DataFrame
+        A long DataFrame of weights, where columns are "date", "contract",
+        "generic", "weight" and optionally "key". If "key" column is
+        present a dictionary of unflattened DataFrames is returned with the
+        dictionary keys corresponding to the "key" column and each sub
+        DataFrame containing rows for this key.
+
+    Returns
+    -------
+    A DataFrame or dict of DataFrames of instrument weights with a MultiIndex
+    where the top level contains pandas.Timestamps and the second level is
+    instrument names. The columns consist of generic names. If dict is returned
+    the dict keys correspond to the "key" column of the input.
+
+    Example
+    -------
+    >>> long_wts = pd.DataFrame(
+    ...         {"date": [TS('2015-01-03')] * 4 + [TS('2015-01-04')] * 4,
+    ...          "contract": ['CLF5'] * 2 + ['CLG5'] * 4 + ['CLH5'] * 2,
+    ...          "generic": ["CL1", "CL2"] * 4,
+    ...          "weight": [1, 0, 0, 1, 1, 0, 0, 1]}
+    ...     ).loc[:, ["date", "contract", "generic", "weight"]]
+    >>> util.unflatten(long_wts)
+
+    See also: calc_rets()
+    """  # NOQA
+    if flat_weights.columns.contains("key"):
+        weights = {}
+        for key in flat_weights.loc[:, "key"].unique():
+            flt_wts = flat_weights.loc[flat_weights.loc[:, "key"] == key, :]
+            flt_wts = flt_wts.drop(labels="key", axis=1)
+            wts = flt_wts.pivot_table(index=["date", "contract"],
+                                      columns=["generic"],
+                                      values=["weight"])
+            wts.columns = wts.columns.droplevel(0)
+            weights[key] = wts
+    else:
+        weights = flat_weights.pivot_table(index=["date", "contract"],
+                                           columns=["generic"],
+                                           values=["weight"])
+        weights.columns = weights.columns.droplevel(0)
+
+    return weights
+
+
 def calc_rets(returns, weights):
     """
     Calculate continuous return series for futures instruments. These consist
