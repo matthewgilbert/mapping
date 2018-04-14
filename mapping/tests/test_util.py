@@ -3,6 +3,7 @@ import os
 from mapping import util
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
+from pandas import Timestamp as TS
 import numpy as np
 
 
@@ -21,8 +22,8 @@ class TestUtil(unittest.TestCase):
 
         # using default name_func in read_price_data()
         df = util.read_price_data(self.prices)
-        dt1 = pd.Timestamp("2014-09-30")
-        dt2 = pd.Timestamp("2014-10-01")
+        dt1 = TS("2014-09-30")
+        dt2 = TS("2014-10-01")
         idx = pd.MultiIndex.from_tuples([(dt1, "CME-FVU2014"),
                                          (dt1, "CME-FVZ2014"),
                                          (dt2, "CME-FVZ2014")],
@@ -36,8 +37,8 @@ class TestUtil(unittest.TestCase):
             return name[-4:] + name[:3]
 
         df = util.read_price_data(self.prices, name_func)
-        dt1 = pd.Timestamp("2014-09-30")
-        dt2 = pd.Timestamp("2014-10-01")
+        dt1 = TS("2014-09-30")
+        dt2 = TS("2014-10-01")
         idx = pd.MultiIndex.from_tuples([(dt1, "2014FVU"), (dt1, "2014FVZ"),
                                          (dt2, "2014FVZ")],
                                         names=["date", "contract"])
@@ -46,16 +47,16 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(df, df_exp)
 
     def test_calc_rets_one_generic(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLG5'),
+                                         (TS('2015-01-05'), 'CLG5')])
         rets = pd.Series([0.1, 0.05, 0.1, 0.8], index=idx)
         vals = [1, 0.5, 0.5, 1]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLG5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1'])
         wrets = util.calc_rets(rets, weights)
@@ -65,24 +66,24 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(wrets, wrets_exp)
 
     def test_calc_rets_two_generics(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLH5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLH5'),
+                                         (TS('2015-01-05'), 'CLG5'),
+                                         (TS('2015-01-05'), 'CLH5')])
         rets = pd.Series([0.1, 0.15, 0.05, 0.1, 0.8, -0.5, 0.2], index=idx)
         vals = [[1, 0], [0, 1],
                 [0.5, 0], [0.5, 0.5], [0, 0.5],
                 [1, 0], [0, 1]]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLH5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5'),
+                                          (TS('2015-01-05'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLH5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1', 'CL2'])
         wrets = util.calc_rets(rets, weights)
@@ -92,25 +93,25 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(wrets, wrets_exp)
 
     def test_calc_rets_two_generics_nans_in_second_generic(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLH5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLH5'),
+                                         (TS('2015-01-05'), 'CLG5'),
+                                         (TS('2015-01-05'), 'CLH5')])
         rets = pd.Series([0.1, np.NaN, 0.05, 0.1, np.NaN, -0.5, 0.2],
                          index=idx)
         vals = [[1, 0], [0, 1],
                 [0.5, 0], [0.5, 0.5], [0, 0.5],
                 [1, 0], [0, 1]]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLH5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5'),
+                                          (TS('2015-01-05'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLH5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1', 'CL2'])
         wrets = util.calc_rets(rets, weights)
@@ -120,24 +121,24 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(wrets, wrets_exp)
 
     def test_calc_rets_two_generics_non_unique_columns(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLH5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLH5'),
+                                         (TS('2015-01-05'), 'CLG5'),
+                                         (TS('2015-01-05'), 'CLH5')])
         rets = pd.Series([0.1, 0.15, 0.05, 0.1, 0.8, -0.5, 0.2], index=idx)
         vals = [[1, 0], [0, 1],
                 [0.5, 0], [0.5, 0.5], [0, 0.5],
                 [1, 0], [0, 1]]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLH5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5'),
+                                          (TS('2015-01-05'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLH5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1', 'CL1'])
 
@@ -147,41 +148,41 @@ class TestUtil(unittest.TestCase):
         self.assertRaises(ValueError, non_unique)
 
     def test_calc_rets_two_generics_two_asts(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLH5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLG5'),
+                                         (TS('2015-01-04'), 'CLH5'),
+                                         (TS('2015-01-05'), 'CLG5'),
+                                         (TS('2015-01-05'), 'CLH5')])
         rets1 = pd.Series([0.1, 0.15, 0.05, 0.1, 0.8, -0.5, 0.2], index=idx)
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'COF5'),
-                                         (pd.Timestamp('2015-01-03'), 'COG5'),
-                                         (pd.Timestamp('2015-01-04'), 'COF5'),
-                                         (pd.Timestamp('2015-01-04'), 'COG5'),
-                                         (pd.Timestamp('2015-01-04'), 'COH5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'COF5'),
+                                         (TS('2015-01-03'), 'COG5'),
+                                         (TS('2015-01-04'), 'COF5'),
+                                         (TS('2015-01-04'), 'COG5'),
+                                         (TS('2015-01-04'), 'COH5')])
         rets2 = pd.Series([0.1, 0.15, 0.05, 0.1, 0.4], index=idx)
         rets = {"CL": rets1, "CO": rets2}
 
         vals = [[1, 0], [0, 1],
                 [0.5, 0], [0.5, 0.5], [0, 0.5],
                 [1, 0], [0, 1]]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLH5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLH5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-04'), 'CLH5'),
+                                          (TS('2015-01-05'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLH5')
                                           ])
         weights1 = pd.DataFrame(vals, index=widx, columns=["CL0", "CL1"])
         vals = [[1, 0], [0, 1],
                 [0.5, 0], [0.5, 0.5], [0, 0.5]]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'COF5'),
-                                          (pd.Timestamp('2015-01-03'), 'COG5'),
-                                          (pd.Timestamp('2015-01-04'), 'COF5'),
-                                          (pd.Timestamp('2015-01-04'), 'COG5'),
-                                          (pd.Timestamp('2015-01-04'), 'COH5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'COF5'),
+                                          (TS('2015-01-03'), 'COG5'),
+                                          (TS('2015-01-04'), 'COF5'),
+                                          (TS('2015-01-04'), 'COG5'),
+                                          (TS('2015-01-04'), 'COH5')
                                           ])
         weights2 = pd.DataFrame(vals, index=widx, columns=["CO0", "CO1"])
         weights = {"CL": weights1, "CO": weights2}
@@ -194,19 +195,19 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(wrets, wrets_exp)
 
     def test_calc_rets_extra_instr_rets(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-03'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-03'), 'CLH5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-06'), 'CLG5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLG5'),
+                                         (TS('2015-01-03'), 'CLH5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLG5'),
+                                         (TS('2015-01-05'), 'CLG5'),
+                                         (TS('2015-01-06'), 'CLG5')])
         rets = pd.Series([0.1, 0.2, 0.4, 0.05, 0.1, 0.8, 0.01], index=idx)
         vals = [1, 0.5, 0.5, 1]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLG5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1'])
         wrets = util.calc_rets(rets, weights)
@@ -216,15 +217,15 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(wrets, wrets_exp)
 
     def test_calc_rets_missing_instr_rets(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-05'), 'CLG5')])
         rets = pd.Series([0.1, 0.2, 0.4], index=idx)
         vals = [1, 0.5, 0.5, 1]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLG5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1'])
         wrets = util.calc_rets(rets, weights)
@@ -234,16 +235,16 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(wrets, wrets_exp)
 
     def test_calc_rets_nan_instr_rets(self):
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG5')])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLG5'),
+                                         (TS('2015-01-05'), 'CLG5')])
         rets = pd.Series([pd.np.NaN, pd.np.NaN, 0.1, 0.8], index=idx)
         vals = [1, 0.5, 0.5, 1]
-        widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLF5'),
-                                          (pd.Timestamp('2015-01-04'), 'CLG5'),
-                                          (pd.Timestamp('2015-01-05'), 'CLG5')
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLG5'),
+                                          (TS('2015-01-05'), 'CLG5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1'])
         wrets = util.calc_rets(rets, weights)
@@ -561,22 +562,22 @@ class TestUtil(unittest.TestCase):
 
     def test_weighted_expiration_two_generics(self):
         vals = [[1, 0, 1/2, 1/2, 0, 1, 0], [0, 1, 0, 1/2, 1/2, 0, 1]]
-        idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF15'),
-                                         (pd.Timestamp('2015-01-03'), 'CLG15'),
-                                         (pd.Timestamp('2015-01-04'), 'CLF15'),
-                                         (pd.Timestamp('2015-01-04'), 'CLG15'),
-                                         (pd.Timestamp('2015-01-04'), 'CLH15'),
-                                         (pd.Timestamp('2015-01-05'), 'CLG15'),
-                                         (pd.Timestamp('2015-01-05'), 'CLH15')])  # NOQA
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF15'),
+                                         (TS('2015-01-03'), 'CLG15'),
+                                         (TS('2015-01-04'), 'CLF15'),
+                                         (TS('2015-01-04'), 'CLG15'),
+                                         (TS('2015-01-04'), 'CLH15'),
+                                         (TS('2015-01-05'), 'CLG15'),
+                                         (TS('2015-01-05'), 'CLH15')])
         weights = pd.DataFrame({"CL1": vals[0], "CL2": vals[1]}, index=idx)
-        contract_dates = pd.Series([pd.Timestamp('2015-01-20'),
-                                    pd.Timestamp('2015-02-21'),
-                                    pd.Timestamp('2015-03-20')],
+        contract_dates = pd.Series([TS('2015-01-20'),
+                                    TS('2015-02-21'),
+                                    TS('2015-03-20')],
                                    index=['CLF15', 'CLG15', 'CLH15'])
         wexp = util.weighted_expiration(weights, contract_dates)
         exp_wexp = pd.DataFrame([[17.0, 49.0], [32.0, 61.5], [47.0, 74.0]],
-                                index=[pd.Timestamp('2015-01-03'),
-                                       pd.Timestamp('2015-01-04'),
-                                       pd.Timestamp('2015-01-05')],
+                                index=[TS('2015-01-03'),
+                                       TS('2015-01-04'),
+                                       TS('2015-01-05')],
                                 columns=["CL1", "CL2"])
         assert_frame_equal(wexp, exp_wexp)
