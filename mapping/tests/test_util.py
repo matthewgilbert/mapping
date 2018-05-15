@@ -220,23 +220,18 @@ class TestUtil(unittest.TestCase):
                                  columns=['CL1'])
         assert_frame_equal(wrets, wrets_exp)
 
-    def test_calc_rets_missing_instr_rets(self):
+    def test_calc_rets_missing_instr_rets_key_error(self):
         idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
                                          (TS('2015-01-04'), 'CLF5'),
-                                         (TS('2015-01-05'), 'CLG5')])
-        rets = pd.Series([0.1, 0.2, 0.4], index=idx)
-        vals = [1, 0.5, 0.5, 1]
+                                         (TS('2015-01-04'), 'CLG5')])
+        irets = pd.Series([0.02, 0.01, 0.012], index=idx)
+        vals = [1, 1/2, 1/2, 1]
         widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
                                           (TS('2015-01-04'), 'CLF5'),
                                           (TS('2015-01-04'), 'CLG5'),
-                                          (TS('2015-01-05'), 'CLG5')
-                                          ])
-        weights = pd.DataFrame(vals, index=widx, columns=['CL1'])
-        wrets = util.calc_rets(rets, weights)
-        wrets_exp = pd.DataFrame([0.1, pd.np.NaN, 0.4],
-                                 index=weights.index.levels[0],
-                                 columns=['CL1'])
-        assert_frame_equal(wrets, wrets_exp)
+                                          (TS('2015-01-05'), 'CLG5')])
+        weights = pd.DataFrame(vals, index=widx, columns=["CL1"])
+        self.assertRaises(KeyError, util.calc_rets, irets, weights)
 
     def test_calc_rets_nan_instr_rets(self):
         idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),

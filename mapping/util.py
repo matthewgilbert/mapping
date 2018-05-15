@@ -207,13 +207,17 @@ def calc_rets(returns, weights):
     for root in returns:
         root_wts = weights[root]
         for generic in root_wts.columns:
-            # grouby time
             gnrc_wts = root_wts.loc[:, generic]
-            # drop generics where weight is 0, this avoids potential NaN in
-            # later indexing of rets, causing a NaN for aggregate returns even
-            # when 0 weight
+            # drop generics where weight is 0, this avoids potential KeyError
+            # in later indexing of rets even when ret has weight of 0
             gnrc_wts = gnrc_wts.loc[gnrc_wts != 0]
-            rets = returns[root].loc[gnrc_wts.index]
+            root_rets = returns[root]
+            if not gnrc_wts.index.isin(root_rets.index).all():
+                raise KeyError("'root_rets.index' labels missing from "
+                               "'gnrc_wts' for root '{0}', generic '{1}'"
+                               .format(root, generic))
+            rets = root_rets.loc[gnrc_wts.index]
+            # groupby time
             group_rets = (rets * gnrc_wts).groupby(level=0)
             grets.append(group_rets.apply(pd.DataFrame.sum, skipna=False))
 
