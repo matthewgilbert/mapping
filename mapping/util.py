@@ -197,10 +197,10 @@ def calc_rets(returns, weights):
     if not isinstance(weights, dict):
         weights = {"": weights}
 
-    for ast in weights:
-        if not weights[ast].columns.is_unique:
+    for root in weights:
+        if not weights[root].columns.is_unique:
             raise ValueError("'weights' DataFrames must have unique columns:\n"
-                             "%s" % weights[ast])
+                             "%s" % weights[root])
 
     grets = []
     cols = []
