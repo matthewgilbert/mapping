@@ -62,6 +62,8 @@ def flatten(weights):
 
     Example
     -------
+    >>> import pandas as pd
+    >>> import mapping.util as util
     >>> vals = [[1, 0], [0, 1], [1, 0], [0, 1]]
     >>> widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF5'),
     ...                                   (pd.Timestamp('2015-01-03'), 'CLG5'),
@@ -109,6 +111,9 @@ def unflatten(flat_weights):
 
     Example
     -------
+    >>> import pandas as pd
+    >>> from pandas import Timestamp as TS
+    >>> import mapping.util as util
     >>> long_wts = pd.DataFrame(
     ...         {"date": [TS('2015-01-03')] * 4 + [TS('2015-01-04')] * 4,
     ...          "contract": ['CLF5'] * 2 + ['CLG5'] * 4 + ['CLH5'] * 2,
@@ -168,6 +173,8 @@ def calc_rets(returns, weights):
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> import mapping.util as util
     >>> idx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-02'), 'CLF5'),
     ...                                  (pd.Timestamp('2015-01-03'), 'CLF5'),
     ...                                  (pd.Timestamp('2015-01-03'), 'CLG5'),
@@ -261,6 +268,8 @@ def calc_trades(current_contracts, desired_holdings, trade_weights, prices,
 
     Example
     -------
+    >>> import pandas as pd
+    >>> import mapping.util as util
     >>> wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
     ...                    index=["CLX16", "CLZ16", "CLF17"],
     ...                    columns=["CL1", "CL2"])
@@ -351,6 +360,8 @@ def to_notional(instruments, prices, multipliers, desired_ccy=None,
 
     Example
     -------
+    >>> import pandas as pd
+    >>> import mapping.util as util
     >>> current_contracts = pd.Series([-1, 1], index=['CLX16', 'CLZ16'])
     >>> prices = pd.Series([50.32, 50.41], index=['CLX16', 'CLZ16'])
     >>> multipliers = pd.Series([100, 100], index=['CLX16', 'CLZ16'])
@@ -469,6 +480,8 @@ def get_multiplier(weights, root_generic_multiplier):
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> import mapping.util as util
     >>> wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
     ...                    index=["CLX16", "CLZ16", "CLF17"],
     ...                    columns=[0, 1])
@@ -517,6 +530,8 @@ def weighted_expiration(weights, contract_dates):
 
     Examples:
     ---------
+    >>> import pandas as pd
+    >>> import mapping.util as util
     >>> vals = [[1, 0, 1/2, 1/2, 0, 1, 0], [0, 1, 0, 1/2, 1/2, 0, 1]]
     >>> widx = pd.MultiIndex.from_tuples([(pd.Timestamp('2015-01-03'), 'CLF15'),
     ...                                   (pd.Timestamp('2015-01-03'), 'CLG15'),
@@ -530,7 +545,7 @@ def weighted_expiration(weights, contract_dates):
     ...                             pd.Timestamp('2015-02-21'),
     ...                             pd.Timestamp('2015-03-20')],
     ...                            index=['CLF15', 'CLG15', 'CLH15'])
-    >>> weighted_expiration(weights, contract_dates)
+    >>> util.weighted_expiration(weights, contract_dates)
     """  # NOQA
     cols = weights.columns
     weights = weights.reset_index(level=-1)
