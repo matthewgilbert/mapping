@@ -32,6 +32,8 @@ def roller(timestamps, contract_dates, get_weights, **kwargs):
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> import mapping.mappings as mappings
     >>> cols = pd.MultiIndex.from_product([["CL1", "CL2"], ['front', 'back']])
     >>> idx = [-2, -1, 0]
     >>> trans = pd.DataFrame([[1.0, 0.0, 1.0, 0.0], [0.5, 0.5, 0.5, 0.5],
@@ -138,6 +140,8 @@ def static_transition(timestamp, contract_dates, transition, holidays=None,
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> import mapping.mappings as mappings
     >>> cols = pd.MultiIndex.from_product([["CL1", "CL2"], ['front', 'back']])
     >>> idx = [-2, -1, 0]
     >>> transition = pd.DataFrame([[1.0, 0.0, 1.0, 0.0], [0.5, 0.5, 0.5, 0.5],
@@ -281,6 +285,8 @@ def to_generics(instruments, weights):
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> import mapping.mappings as mappings
     >>> wts = pd.DataFrame([[0.5, 0], [0.5, 0.5], [0, 0.5]],
     ...                    index=["CLX16", "CLZ16", "CLF17"],
     ...                    columns=["CL1", "CL2"])
