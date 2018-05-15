@@ -197,10 +197,11 @@ def calc_rets(returns, weights):
     if not isinstance(weights, dict):
         weights = {"": weights}
 
+    generic_superset = []
     for root in weights:
-        if not weights[root].columns.is_unique:
-            raise ValueError("'weights' DataFrames must have unique columns:\n"
-                             "%s" % weights[root])
+        generic_superset.extend(weights[root].columns.tolist())
+    if len(set(generic_superset)) != len(generic_superset):
+        raise ValueError("Columns for weights must all be unique")
 
     grets = []
     cols = []
@@ -220,11 +221,8 @@ def calc_rets(returns, weights):
             # groupby time
             group_rets = (rets * gnrc_wts).groupby(level=0)
             grets.append(group_rets.apply(pd.DataFrame.sum, skipna=False))
-
         cols.extend(root_wts.columns.tolist())
 
-    if len(set(cols)) != len(cols):
-        raise ValueError("Columns for weights must all be unique")
     rets = pd.concat(grets, axis=1, keys=cols)
     rets = rets.loc[:, rets.columns.sort_values()]
     return rets
