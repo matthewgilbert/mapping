@@ -204,20 +204,20 @@ def calc_rets(returns, weights):
 
     grets = []
     cols = []
-    for ast in returns:
-        wts = weights[ast]
-        for generic in wts.columns:
+    for root in returns:
+        root_wts = weights[root]
+        for generic in root_wts.columns:
             # grouby time
-            wts_for_gnrc = wts.loc[:, generic]
+            gnrc_wts = root_wts.loc[:, generic]
             # drop generics where weight is 0, this avoids potential NaN in
             # later indexing of rets, causing a NaN for aggregate returns even
             # when 0 weight
-            wts_for_gnrc = wts_for_gnrc.loc[wts_for_gnrc != 0]
-            rets = returns[ast].loc[wts_for_gnrc.index]
-            group_rets = (rets * wts_for_gnrc).groupby(level=0)
+            gnrc_wts = gnrc_wts.loc[gnrc_wts != 0]
+            rets = returns[root].loc[gnrc_wts.index]
+            group_rets = (rets * gnrc_wts).groupby(level=0)
             grets.append(group_rets.apply(pd.DataFrame.sum, skipna=False))
 
-        cols.extend(wts.columns.tolist())
+        cols.extend(root_wts.columns.tolist())
 
     if len(set(cols)) != len(cols):
         raise ValueError("Columns for weights must all be unique")
