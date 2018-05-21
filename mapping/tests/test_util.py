@@ -145,11 +145,7 @@ class TestUtil(unittest.TestCase):
                                           (TS('2015-01-05'), 'CLH5')
                                           ])
         weights = pd.DataFrame(vals, index=widx, columns=['CL1', 'CL1'])
-
-        def non_unique():
-            return util.calc_rets(rets, weights)
-
-        self.assertRaises(ValueError, non_unique)
+        self.assertRaises(ValueError, util.calc_rets, rets, weights)
 
     def test_calc_rets_two_generics_two_asts(self):
         idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
@@ -474,12 +470,8 @@ class TestUtil(unittest.TestCase):
         current_contracts = pd.Series([0], index=['CLX16'])
         prices = pd.Series([50.32], index=['CLX16'])
         multipliers = pd.Series([1], index=['CLX16'])
-
-        def extra_trade():
-            util.calc_trades(current_contracts, desired_holdings, wts, prices,
-                             multipliers)
-
-        self.assertRaises(ValueError, extra_trade)
+        self.assertRaises(ValueError, util.calc_trades, current_contracts,
+                          desired_holdings, wts, prices, multipliers)
 
     def test_trade_extra_desired_holdings_without_current_contracts(self):
         # this should treat the missing holdings as 0, since this would often
@@ -553,11 +545,7 @@ class TestUtil(unittest.TestCase):
                            index=["CLX16", "CLZ16", "CLF17"],
                            columns=[0, 1])
         ast_mult = pd.Series([1000, 1000], index=["CL", "CO"])
-
-        def format_mismatch():
-            util.get_multiplier(wts, ast_mult)
-
-        self.assertRaises(ValueError, format_mismatch)
+        self.assertRaises(ValueError, util.get_multiplier, wts, ast_mult)
 
     def test_weighted_expiration_two_generics(self):
         vals = [[1, 0, 1/2, 1/2, 0, 1, 0], [0, 1, 0, 1/2, 1/2, 0, 1]]
