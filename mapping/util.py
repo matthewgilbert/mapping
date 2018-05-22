@@ -84,7 +84,7 @@ def flatten(weights):
             wts.append(wt)
         wts = pd.concat(wts, axis=0).reset_index(drop=True)
     else:
-        ValueError("weights must be pd.DataFrame or dict")
+        raise ValueError("weights must be pd.DataFrame or dict")
 
     return wts
 

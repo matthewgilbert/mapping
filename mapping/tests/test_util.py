@@ -608,6 +608,10 @@ class TestUtil(unittest.TestCase):
         ).loc[:, ["date", "contract", "generic", "weight", "key"]]
         assert_frame_equal(flat_wts, flat_wts_exp)
 
+    def test_flatten_bad_input(self):
+        dummy = 0
+        self.assertRaises(ValueError, util.flatten, dummy)
+
     def test_unflatten(self):
         flat_wts = pd.DataFrame(
             {"date": [TS('2015-01-03')] * 4 + [TS('2015-01-04')] * 4,
