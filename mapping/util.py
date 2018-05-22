@@ -560,7 +560,7 @@ def weighted_expiration(weights, contract_dates):
     return wexp
 
 
-def _get_fx_conversions(fx_rates, ccy, desired_ccy='USD'):
+def _get_fx_conversions(fx_rates, ccy, desired_ccy):
     # return rate to multiply through by to convert from instrument ccy to
     # desired ccy
     # fx_rates is a series of fx rates with index names of the form AUDUSD,
@@ -574,6 +574,7 @@ def _get_fx_conversions(fx_rates, ccy, desired_ccy='USD'):
     elif ccy_pair2 in fx_rates:
         conv_rate = 1 / fx_rates.loc[ccy_pair2]
     else:
-        raise(KeyError(ccy_pair1, ccy_pair2))
+        raise ValueError("Cannot convert from {0} to {1} with any of "
+                         "rates:\n{2}".format(ccy, desired_ccy, fx_rates))
 
     return conv_rate

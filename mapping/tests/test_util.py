@@ -339,6 +339,16 @@ class TestUtil(unittest.TestCase):
         self.assertRaises(ValueError, util.to_notional, instrs, prices, mults,
                           desired_ccy, instr_fx, fx_rate)
 
+    def test_to_notional_bad_fx(self):
+        instrs = pd.Series([1], index=['A'])
+        prices = pd.Series([200.37], index=['A'])
+        mults = pd.Series([100], index=['A'])
+        instr_fx = pd.Series(['JPY'], index=['A'])
+        fx_rates = pd.Series([1.32], index=['GBPCAD'])
+        self.assertRaises(ValueError, util.to_notional, instrs, prices, mults,
+                          desired_ccy='USD', instr_fx=instr_fx,
+                          fx_rates=fx_rates)
+
     def test_to_contracts_rounder(self):
         prices = pd.Series([30.20, 30.5], index=['CLZ6', 'COZ6'])
         multipliers = pd.Series([1, 1], index=['CLZ6', 'COZ6'])
