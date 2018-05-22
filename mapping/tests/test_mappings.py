@@ -229,22 +229,31 @@ class TestMappings(unittest.TestCase):
                              index=idx, columns=cols)
 
         non_unique_index = pd.Series([pd.Timestamp('2016-10-20'),
-                                      pd.Timestamp('2016-11-21'),
-                                      pd.Timestamp('2016-12-20')],
-                                     index=['instr1', 'instr1', 'instr3'])
+                                      pd.Timestamp('2016-11-21')],
+                                     index=['instr1', 'instr1'])
         self.assertRaises(ValueError, mappings.roller,
                           ts, non_unique_index, mappings.static_transition,
                           transition=trans)
 
-        ts = [pd.Timestamp("2016-10-19"), pd.Timestamp("2016-10-20")]
-        non_monotonic_vals = pd.Series([pd.Timestamp('2016-10-20'),
-                                        pd.Timestamp('2016-10-20'),
-                                        pd.Timestamp('2016-12-20')],
-                                       index=['instr1', 'instr2', 'instr3'])
+        non_unique_vals = pd.Series([pd.Timestamp('2016-10-20'),
+                                     pd.Timestamp('2016-10-20')],
+                                    index=['instr1', 'instr2'])
 
         self.assertRaises(ValueError, mappings.roller,
-                          ts, non_monotonic_vals, mappings.static_transition,
+                          ts, non_unique_vals, mappings.static_transition,
                           transition=trans)
+
+        non_monotonic_vals = pd.Series([pd.Timestamp('2016-10-20'),
+                                        pd.Timestamp('2016-10-19')],
+                                       index=['instr1', 'instr2'])
+
+        self.assertRaises(ValueError, mappings.static_transition,
+                          ts[0], non_monotonic_vals, transition=trans)
+
+        not_enough_vals = pd.Series([pd.Timestamp('2016-10-19')],
+                                    index=['instr1'])
+        self.assertRaises(IndexError, mappings.static_transition,
+                          ts[0], not_enough_vals, transition=trans)
 
     def test_during_roll_two_generics_one_day_static_roller(self):
         dt = self.dates.iloc[0]
