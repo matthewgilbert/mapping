@@ -37,7 +37,8 @@ class TestUtil(unittest.TestCase):
         assert_frame_equal(df, df_exp)
 
         def name_func(fstr):
-            name = fstr.split('-')[1].split('.')[0]
+            file_name = os.path.split(fstr)[-1]
+            name = file_name.split('-')[1].split('.')[0]
             return name[-4:] + name[:3]
 
         df = util.read_price_data(self.prices, name_func)
