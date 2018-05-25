@@ -4,6 +4,12 @@ import cvxpy
 import sys
 
 
+if cvxpy.__version__ <= "0.4.11":
+    CVX_SUM = cvxpy.sum_entries
+else:
+    CVX_SUM = cvxpy.sum
+
+
 def roller(timestamps, contract_dates, get_weights, **kwargs):
     """
     Calculate weight allocations to tradeable instruments for generic futures
@@ -315,7 +321,7 @@ def to_generics(instruments, weights):
         A = w.values
         b = winstrs.values
         x = cvxpy.Variable(A.shape[1])
-        constrs = [cvxpy.sum_entries(x) == np.sum(b)]
+        constrs = [CVX_SUM(x) == np.sum(b)]
         obj = cvxpy.Minimize(cvxpy.sum_squares(A * x - b))
         prob = cvxpy.Problem(obj, constrs)
         prob.solve()
