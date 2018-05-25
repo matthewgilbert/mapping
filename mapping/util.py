@@ -213,10 +213,15 @@ def calc_rets(returns, weights):
             # in later indexing of rets even when ret has weight of 0
             gnrc_wts = gnrc_wts.loc[gnrc_wts != 0]
             root_rets = returns[root]
+            # necessary instead of missing_keys.any() to support MultiIndex
             if not gnrc_wts.index.isin(root_rets.index).all():
-                raise KeyError("'root_rets.index' labels missing from "
-                               "'gnrc_wts' for root '{0}', generic '{1}'"
-                               .format(root, generic))
+                # as list instead of MultiIndex for legibility when stack trace
+                missing_keys = (gnrc_wts.index.difference(root_rets.index)
+                                .tolist())
+                raise KeyError("From the [index] of 'gnrc_wts' none of {0} "
+                               "are in the [index]  of 'root_rets' "
+                               "for root '{1}', generic '{2}'"
+                               .format(missing_keys, root, generic))
             rets = root_rets.loc[gnrc_wts.index]
             # groupby time
             group_rets = (rets * gnrc_wts).groupby(level=0)
