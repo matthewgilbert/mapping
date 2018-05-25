@@ -9,6 +9,8 @@ python:
    - "3.6-dev" # 3.6 development branch
 before_install:
   - sudo apt-get update
+  # needed to install cvxpy
+  - sudo apt install cmake
 install:
   - "pip install -r dev-requirements.txt"
 # command to run tests
