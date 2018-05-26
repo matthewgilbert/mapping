@@ -4,10 +4,11 @@ import cvxpy
 import sys
 
 
-if cvxpy.__version__ <= "0.4.11":
-    CVX_SUM = cvxpy.sum_entries
+# deal with API change from cvxpy version 0.4 to 1.0
+if hasattr(cvxpy, "sum_entries"):
+    CVX_SUM = getattr(cvxpy, "sum_entries")
 else:
-    CVX_SUM = cvxpy.sum
+    CVX_SUM = getattr(cvxpy, "sum")
 
 
 def roller(timestamps, contract_dates, get_weights, **kwargs):
