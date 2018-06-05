@@ -23,3 +23,10 @@ long dataframe
 - Change util.calc_rets to throw KeyError instead of NaN when missing keys are
 indexed
 - make docstrings runnable by including appropriate imports
+
+# mapping 0.1.4
+
+- fix compatibility issues with cvxpy 1.0
+- improve error messages for util.calc_rets()
+- fix TravisCI / cvxpy compatibility, see issue #6
+- add business day convenience function for generating contract_dates
