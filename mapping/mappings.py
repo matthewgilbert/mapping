@@ -11,6 +11,69 @@ else:
     CVX_SUM = getattr(cvxpy, "sum")
 
 
+TO_MONTH_CODE = dict(zip(range(1, 13), "FGHJKMNQUVXZ"))
+FROM_MONTH_CODE = dict(zip("FGHJKMNQUVXZ", range(1, 13)))
+
+
+def bdom_roll_date(sd, ed, bdom, months, holidays=[]):
+    """
+    Convenience function for getting business day data associated with
+    contracts. Usefully for generating business day derived 'contract_dates'
+    which can be used as input to roller(). Returns dates for a business day of
+    the month for months in months.keys() between the start date and end date.
+
+    Parameters
+    ----------
+    sd: str
+        String representing start date, %Y%m%d
+    ed: str
+        String representing end date, %Y%m%d
+    bdom: int
+        Integer indicating business day of month
+    months: dict
+        Dictionnary where key is integer representation of month [1-12] and
+        value is the month code [FGHJKMNQUVXZ]
+    holidays: list
+        List of holidays to exclude from business days
+
+    Return
+    ------
+    A DataFrame with columns ['date', 'year', 'month', 'bdom', 'month_code']
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mapping.mappings import bdom_roll_date
+    >>> bdom_roll_date("20160101", "20180501", 7, {1:"G", 3:"J", 8:"U"})
+    >>> bdom_roll_date("20160101", "20180501", 7, {1:"G", 3:"J", 8:"U"},
+    ...                holidays=[pd.Timestamp("20160101")])
+    """
+    sd = pd.Timestamp(sd)
+    ed = pd.Timestamp(ed)
+    t1 = sd
+    if not t1.is_month_start:
+        t1 = t1 - pd.offsets.MonthBegin(1)
+    t2 = ed
+    if not t2.is_month_end:
+        t2 = t2 + pd.offsets.MonthEnd(1)
+
+    dates = pd.date_range(t1, t2, freq="b")
+    dates = dates.difference(holidays)
+    date_data = pd.DataFrame({"date": dates, "year": dates.year,
+                              "month": dates.month, "bdom": 1})
+    date_data.loc[:, "bdom"] = (
+        date_data.groupby(by=["year", "month"])["bdom"].cumsum()
+    )
+    date_data = date_data.loc[date_data.bdom == bdom, :]
+    date_data = date_data.loc[date_data.month.isin(months), :]
+    date_data.loc[:, "month_code"] = date_data.month.apply(lambda x: months[x])
+
+    idx = (date_data.date >= sd) & (date_data.date <= ed)
+    date_data = date_data.loc[idx, :]
+    date_data = date_data.reset_index(drop=True)
+    return date_data
+
+
 def roller(timestamps, contract_dates, get_weights, **kwargs):
     """
     Calculate weight allocations to tradeable instruments for generic futures

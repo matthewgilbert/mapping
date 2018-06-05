@@ -2,6 +2,7 @@ import unittest
 from mapping import mappings
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pandas as pd
+from pandas import Timestamp as TS
 import numpy as np
 from pandas.tseries.offsets import BDay
 
@@ -435,3 +436,39 @@ class TestMappings(unittest.TestCase):
                                   "COX16", "COZ16", "COF17"])
 
         self.assertRaises(KeyError, mappings.to_generics, instrs, wts)
+
+    def test_bdom(self):
+        exp_cols = ["date", "year", "month", "bdom", "month_code"]
+
+        months = {1: "G", 3: "J", 8: "U"}
+        date_info = mappings.bdom_roll_date("20160115", "20171231", 2, months)
+        date_info_exp = pd.DataFrame({
+            "date": [TS("20160302"), TS("20160802"), TS("20170103"),
+                     TS("20170302"), TS("20170802")],
+            "year": [2016, 2016, 2017, 2017, 2017],
+            "month": [3, 8, 1, 3, 8],
+            "bdom": 2,
+            "month_code": ["J", "U", "G", "J", "U"]
+        })
+        assert_frame_equal(date_info, date_info_exp)
+
+        # with holidays
+        months = {1: "G", 3: "J"}
+        date_info = mappings.bdom_roll_date(
+            "20160115", "20171231", 3, months,
+            holidays=[pd.Timestamp("20160301")]
+        )
+        date_info_exp = pd.DataFrame({
+            "date": [TS("20160304"), TS("20170104"), TS("20170303")],
+            "year": [2016, 2017, 2017],
+            "month": [3, 1, 3],
+            "bdom": 3,
+            "month_code": ["J", "G", "J"]
+        })
+        assert_frame_equal(date_info, date_info_exp)
+
+        date_info_empty = mappings.bdom_roll_date(
+            "20160101", "20150101", 2, months
+        )
+        date_info_exp = pd.DataFrame(index=range(0), columns=exp_cols)
+        assert_frame_equal(date_info_empty, date_info_exp, check_dtype=False)
