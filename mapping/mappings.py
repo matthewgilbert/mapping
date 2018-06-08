@@ -69,8 +69,9 @@ def bdom_roll_date(sd, ed, bdom, months, holidays=[]):
     date_data.loc[:, "month_code"] = date_data.month.apply(lambda x: months[x])
 
     idx = (date_data.date >= sd) & (date_data.date <= ed)
-    date_data = date_data.loc[idx, :]
-    date_data = date_data.reset_index(drop=True)
+    order = ['date', 'year', 'month', 'bdom', 'month_code']
+    date_data = (date_data.loc[idx, order]
+                 .reset_index(drop=True))
     return date_data
 
 
