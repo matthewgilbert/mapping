@@ -450,8 +450,7 @@ class TestMappings(unittest.TestCase):
             "bdom": 2,
             "month_code": ["J", "U", "G", "J", "U"]
         })
-        order = ["date", "year", "month", "bdom", "month_code"]
-        date_info_exp = date_info_exp.loc[:, order]
+        date_info_exp = date_info_exp.loc[:, exp_cols]
         assert_frame_equal(date_info, date_info_exp)
 
         # with holidays
@@ -467,6 +466,7 @@ class TestMappings(unittest.TestCase):
             "bdom": 3,
             "month_code": ["J", "G", "J"]
         })
+        date_info_exp = date_info_exp.loc[:, exp_cols]
         assert_frame_equal(date_info, date_info_exp)
 
         date_info_empty = mappings.bdom_roll_date(
