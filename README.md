@@ -1,4 +1,5 @@
 # mapping
+[![PyPI version](https://badge.fury.io/py/mapping.svg)](https://badge.fury.io/py/mapping)
 [![Build Status](https://travis-ci.org/matthewgilbert/mapping.svg?branch=master)](https://travis-ci.org/matthewgilbert/mapping)
 [![Coverage Status](https://coveralls.io/repos/github/matthewgilbert/mapping/badge.svg?branch=master)](https://coveralls.io/github/matthewgilbert/mapping?branch=master)
 
