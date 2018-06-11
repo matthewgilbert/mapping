@@ -42,3 +42,14 @@ after_success:
 # Don't want notifications
 notifications:
   email: false
+deploy:
+  provider: pypi
+  user: matthewgilbert
+  password:
+    secure: "YSmJoW9i+aXZAe5W2D/3aIjZMVTp46De2P/1UpRZ9ULWCKx5MnxTPGs1zOeFpHGS8mv7hnnDgmZWFNeh2g2g5A0wPMiZejTnKB5TH4dR0b813jfwimTGEJXQaknfNfyngmuRUWNf/PJbWJxnbccJmAftO5/m/zW0PkPqwhxCGW1eqL58NTA4b5FS9h8tml/aVsdfRfeGqBPM9EDH3H801D98YTlpOmbPKwchu0utmohPEtqPs9YMA8XNLHosbDQRfBZTFbNWjNzQy6vRD4OTVDuPVuMI3bJOP8gAnVevgD5LehUCsvwNloA2lyX12MNCkRePXw20GOKh/xSNZ+8IBLr4QoSMdkGbmymHrMa5S2aJsvj1KWs6ZK79a55PW+SH6upRysTJhLw7ZhQ2w0jY1Hg45LcP7qOm759HNvb+m4y9Icw9d7eJo/LSNCmEF+zgQrp0vh9uT+cOiW487lPhWPoNIWt9I3nBoDf6QVJKsosVz9Niw1rmP+BOLsTgF9ZXR2M7Oqr0+N3uAvCBtu0jx+U/CqkL6txW2kbZQZ6+IgsMDTIJbgtr2R0ozF/0O5HWDWH2n9dC11Ruasq4ulbed8kH3N2T2AezWDt/kuHHThIGEOvgUR5EK7PBxqcltVAu3jiul6BHUbrmYgwmrDcv3EuEaTbA0Gccrnhigi84zfQ="
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: matthewgilbert/mapping
+    branch: master
+    condition: $CVXPY_VERSION == 1.0.1 && $TRAVIS_PYTHON_VERSION == 3.6
