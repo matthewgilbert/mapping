@@ -474,3 +474,8 @@ class TestMappings(unittest.TestCase):
         )
         date_info_exp = pd.DataFrame(index=range(0), columns=exp_cols)
         assert_frame_equal(date_info_empty, date_info_exp, check_dtype=False)
+
+        # forget to pass bdom, check for type error
+        holidays = [pd.Timestamp("20160301")]
+        self.assertRaises(ValueError, mappings.bdom_roll_date,
+                          "20160115", "20171231", months, holidays)

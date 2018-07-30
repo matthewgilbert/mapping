@@ -48,6 +48,9 @@ def bdom_roll_date(sd, ed, bdom, months, holidays=[]):
     >>> bdom_roll_date("20160101", "20180501", 7, {1:"G", 3:"J", 8:"U"},
     ...                holidays=[pd.Timestamp("20160101")])
     """
+    if not isinstance(bdom, int):
+        raise ValueError("'bdom' must be integer")
+
     sd = pd.Timestamp(sd)
     ed = pd.Timestamp(ed)
     t1 = sd
