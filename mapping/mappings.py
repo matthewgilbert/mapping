@@ -244,7 +244,7 @@ def static_transition(timestamp, contract_dates, transition, holidays=None,
     after_contract_dates = contract_dates.loc[contract_dates >= timestamp]
     contracts = after_contract_dates.index
     front_expiry_dt = after_contract_dates.iloc[0]
-    days_to_expiry = np.busday_count(front_expiry_dt, timestamp,
+    days_to_expiry = np.busday_count(front_expiry_dt.date(), timestamp.date(),
                                      holidays=holidays)
 
     name2num = dict(zip(transition.columns.levels[0],
