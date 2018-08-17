@@ -195,28 +195,6 @@ class TestUtil(unittest.TestCase):
                                  columns=['CL0', 'CL1', 'CO0', 'CO1'])
         assert_frame_equal(wrets, wrets_exp)
 
-    def test_calc_rets_extra_instr_rets(self):
-        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
-                                         (TS('2015-01-03'), 'CLG5'),
-                                         (TS('2015-01-03'), 'CLH5'),
-                                         (TS('2015-01-04'), 'CLF5'),
-                                         (TS('2015-01-04'), 'CLG5'),
-                                         (TS('2015-01-05'), 'CLG5'),
-                                         (TS('2015-01-06'), 'CLG5')])
-        rets = pd.Series([0.1, 0.2, 0.4, 0.05, 0.1, 0.8, 0.01], index=idx)
-        vals = [1, 0.5, 0.5, 1]
-        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
-                                          (TS('2015-01-04'), 'CLF5'),
-                                          (TS('2015-01-04'), 'CLG5'),
-                                          (TS('2015-01-05'), 'CLG5')
-                                          ])
-        weights = pd.DataFrame(vals, index=widx, columns=['CL1'])
-        wrets = util.calc_rets(rets, weights)
-        wrets_exp = pd.DataFrame([0.1, 0.075, 0.8],
-                                 index=weights.index.levels[0],
-                                 columns=['CL1'])
-        assert_frame_equal(wrets, wrets_exp)
-
     def test_calc_rets_missing_instr_rets_key_error(self):
         idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
                                          (TS('2015-01-04'), 'CLF5'),
@@ -248,6 +226,49 @@ class TestUtil(unittest.TestCase):
                                  index=weights.index.levels[0],
                                  columns=['CL1'])
         assert_frame_equal(wrets, wrets_exp)
+
+    def test_calc_rets_missing_weight(self):
+        # see https://github.com/matthewgilbert/mapping/issues/8
+
+        # missing weight for return
+        idx = pd.MultiIndex.from_tuples([
+            (TS('2015-01-02'), 'CLF5'),
+            (TS('2015-01-03'), 'CLF5'),
+            (TS('2015-01-04'), 'CLF5')
+        ])
+        rets = pd.Series([0.02, -0.03, 0.06], index=idx)
+        vals = [1, 1]
+        widx = pd.MultiIndex.from_tuples([
+            (TS('2015-01-02'), 'CLF5'),
+            (TS('2015-01-04'), 'CLF5')
+        ])
+        weights = pd.DataFrame(vals, index=widx, columns=["CL1"])
+        self.assertRaises(ValueError, util.calc_rets, rets, weights)
+
+        # extra instrument
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5')])
+        weights1 = pd.DataFrame(1, index=idx, columns=["CL1"])
+        idx = pd.MultiIndex.from_tuples([
+            (TS('2015-01-02'), 'CLF5'),
+            (TS('2015-01-02'), 'CLH5'),
+            (TS('2015-01-03'), 'CLH5'),  # extra day for no weight instrument
+            (TS('2015-01-04'), 'CLF5'),
+            (TS('2015-01-04'), 'CLH5')
+        ])
+        rets = pd.Series([0.02, -0.03, 0.06, 0.05, 0.01], index=idx)
+        self.assertRaises(ValueError, util.calc_rets, rets, weights1)
+
+        # leading / trailing returns
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5')])
+        weights2 = pd.DataFrame(1, index=idx, columns=["CL1"])
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-01'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-05'), 'CLF5')])
+        rets = pd.Series([0.02, -0.03, 0.06, 0.05], index=idx)
+        self.assertRaises(ValueError, util.calc_rets, rets, weights2)
 
     def test_to_notional_empty(self):
         instrs = pd.Series()

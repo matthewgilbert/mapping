@@ -203,34 +203,73 @@ def calc_rets(returns, weights):
     if len(set(generic_superset)) != len(generic_superset):
         raise ValueError("Columns for weights must all be unique")
 
+    _check_indices(returns, weights)
+
     grets = []
     cols = []
     for root in returns:
         root_wts = weights[root]
+        root_rets = returns[root]
         for generic in root_wts.columns:
             gnrc_wts = root_wts.loc[:, generic]
             # drop generics where weight is 0, this avoids potential KeyError
             # in later indexing of rets even when ret has weight of 0
             gnrc_wts = gnrc_wts.loc[gnrc_wts != 0]
-            root_rets = returns[root]
-            # necessary instead of missing_keys.any() to support MultiIndex
-            if not gnrc_wts.index.isin(root_rets.index).all():
-                # as list instead of MultiIndex for legibility when stack trace
-                missing_keys = (gnrc_wts.index.difference(root_rets.index)
-                                .tolist())
-                raise KeyError("From the [index] of 'gnrc_wts' none of {0} "
-                               "are in the [index]  of 'root_rets' "
-                               "for root '{1}', generic '{2}'"
-                               .format(missing_keys, root, generic))
             rets = root_rets.loc[gnrc_wts.index]
             # groupby time
             group_rets = (rets * gnrc_wts).groupby(level=0)
             grets.append(group_rets.apply(pd.DataFrame.sum, skipna=False))
         cols.extend(root_wts.columns.tolist())
 
-    rets = pd.concat(grets, axis=1, keys=cols)
-    rets = rets.loc[:, rets.columns.sort_values()]
+    rets = pd.concat(grets, axis=1, keys=cols).sort_index(axis=1)
     return rets
+
+
+def _check_indices(returns, weights):
+    # dictionaries of returns and weights
+
+    # check 1: ensure that all non zero instrument weights have associated
+    # returns, see https://github.com/matthewgilbert/mapping/issues/3
+
+    # check 2: ensure that returns are not dropped if reindexed from weights,
+    # see https://github.com/matthewgilbert/mapping/issues/8
+
+    if list(returns.keys()) == [""]:
+        msg1 = ("'returns.index.get_level_values(0)' must contain dates which "
+                "are a subset of 'weights.index.get_level_values(0)'"
+                "\nExtra keys: {1}")
+        msg2 = ("{0} from the non zero elements of "
+                "'weights.loc[:, '{2}'].index' are not in 'returns.index'")
+    else:
+        msg1 = ("'returns['{0}'].index.get_level_values(0)' must contain "
+                "dates which are a subset of "
+                "'weights['{0}'].index.get_level_values(0)'"
+                "\nExtra keys: {1}")
+        msg2 = ("{0} from the non zero elements of "
+                "'weights['{1}'].loc[:, '{2}'].index' are not in "
+                "'returns['{1}'].index'")
+
+    for root in returns:
+        wts = weights[root]
+        rets = returns[root]
+
+        dts_rets = rets.index.get_level_values(0)
+        dts_wts = wts.index.get_level_values(0)
+        # check 1
+        if not dts_rets.isin(dts_wts).all():
+            missing_dates = dts_rets.difference(dts_wts).tolist()
+            raise ValueError(msg1.format(root, missing_dates))
+        # check 2
+        for generic in wts.columns:
+            gnrc_wts = wts.loc[:, generic]
+            # drop generics where weight is 0, this avoids potential KeyError
+            # in later indexing of rets even when ret has weight of 0
+            gnrc_wts = gnrc_wts.loc[gnrc_wts != 0]
+            # necessary instead of missing_keys.any() to support MultiIndex
+            if not gnrc_wts.index.isin(rets.index).all():
+                # as list instead of MultiIndex for legibility when stack trace
+                missing_keys = (gnrc_wts.index.difference(rets.index).tolist())
+                raise KeyError(msg2.format(missing_keys, root, generic))
 
 
 def calc_trades(current_contracts, desired_holdings, trade_weights, prices,
