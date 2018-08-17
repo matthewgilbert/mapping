@@ -687,3 +687,70 @@ class TestUtil(unittest.TestCase):
         wts_exp = {"CL": weights1, "CO": weights2}
 
         self.assert_dict_of_frames(wts, wts_exp)
+
+    def test_reindex(self):
+        # no op
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLH5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLH5'),
+                                         (TS('2015-01-05'), 'CLH5')])
+        returns = pd.Series([0.02, 0.01, 0.06, .15, -0.02, -0.05], index=idx)
+        new_rets = util.reindex(returns, idx, limit=1)
+        exp_rets = returns
+        assert_series_equal(exp_rets, new_rets)
+
+        # returns are compounded
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLH5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLH5'),
+                                         (TS('2015-01-05'), 'CLH5')])
+        returns = pd.Series([0.02, 0.01, 0.06, 0.03, -0.02, -0.05], index=idx)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLH5'),
+                                          (TS('2015-01-05'), 'CLH5')])
+        new_rets = util.reindex(returns, widx, limit=1)
+
+        cr1 = (0.01 + 1)*(0.03 + 1) - 1
+        cr2 = (0.06 + 1)*(-0.02 + 1) - 1
+        exp_rets = pd.Series([0.02, cr1, cr2, -0.05], index=widx)
+        assert_series_equal(exp_rets, new_rets)
+
+        # NaN returns introduced and filled
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLH5')])
+        returns = pd.Series([0.02, -0.02, -0.05], index=idx)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLH5'),
+                                          (TS('2015-01-05'), 'CLF5'),
+                                          (TS('2015-01-05'), 'CLH5'),
+                                          (TS('2015-01-06'), 'CLF5'),
+                                          (TS('2015-01-06'), 'CLH5')])
+        new_rets = util.reindex(returns, widx, limit=1)
+
+        exp_rets = pd.Series(
+            [0.02, 0, -0.02, -0.05, 0, 0, np.NaN, np.NaN],
+            index=widx
+        )
+        assert_series_equal(exp_rets, new_rets)
+
+        # leading NaNs introduced
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-05'), 'CLF5')])
+        returns = pd.Series([0.02, -0.02, -0.05], index=idx)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLF5'),
+                                          (TS('2015-01-05'), 'CLF5')])
+        new_rets = util.reindex(returns, widx, limit=1)
+
+        exp_rets = pd.Series([np.NaN, 0.02, -0.02, -0.05], index=widx)
+        assert_series_equal(exp_rets, new_rets)

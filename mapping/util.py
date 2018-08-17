@@ -272,6 +272,70 @@ def _check_indices(returns, weights):
                 raise KeyError(msg2.format(missing_keys, root, generic))
 
 
+def reindex(returns, index, limit):
+    """
+    Reindex a pd.Series by a pd.MultiIndex. Fill forward missing values with 0
+    up to some limit and compound return dates which are dropped during the
+    reindexing.
+
+    Parameters
+    ----------
+    returns: pandas.Series
+        A Series of instrument returns with a MultiIndex where the top level is
+        pandas.Timestamps and the second level is instrument names. Values
+        correspond to one period instrument returns.
+    index: pandas.MultiIndex
+        A MultiIndex where the top level contains pandas.Timestamps and the
+        second level is instrument names.
+    limt: int
+        Number of periods to fill returns forward with 0
+
+    Returns
+    -------
+    A Series of returns which has been reindexed to the frequency of weights.
+    Missing days are added as NaN (filled forward with 0 up to some limit) and
+    days which are omitted are compounding into the follow day.
+
+    Example
+    -------
+    >>> import pandas as pd
+    >>> from pandas import Timestamp as TS
+    >>> import mapping.util as util
+    >>> idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+    ...                                  (TS('2015-01-04'), 'CLF5'),
+    ...                                  (TS('2015-01-05'), 'CLF5')])
+    >>> returns = pd.Series([0.02, -0.02, -0.05], index=idx)
+    >>> widx = pd.MultiIndex.from_tuples([(TS('2015-01-01'), 'CLF5'),
+    ...                                   (TS('2015-01-02'), 'CLF5'),
+    ...                                   (TS('2015-01-03'), 'CLF5'),
+    ...                                   (TS('2015-01-05'), 'CLF5'),
+    ...                                   (TS('2015-01-06'), 'CLF5'),
+    ...                                   (TS('2015-01-07'), 'CLF5')])
+    >>> util.reindex(returns, widx, limit=1)
+
+    Notes
+    -----
+    When we splice contract returns we don't want a date present in the returns
+    to be dropped since it is not present in weights. A discussion of this
+    issue available at https://github.com/matthewgilbert/mapping/issues/9
+    """
+    cumulative_rets = (returns + 1).groupby(level=1).cumprod()
+    # reindexing can both drop days and introduce NaNs for days not present
+    cumulative_rets = cumulative_rets.reindex(index)
+    cumulative_rets = (cumulative_rets.groupby(level=1)
+                       .fillna(method="ffill", limit=limit))
+
+    rets = cumulative_rets.groupby(level=1).apply(lambda x: x / x.shift())
+    # account for first value of each instrument
+    first_valid_idx = (cumulative_rets.groupby(level=1)
+                       .apply(lambda x: x.first_valid_index())).tolist()
+    rets.loc[first_valid_idx] = cumulative_rets.loc[first_valid_idx]
+    rets = rets - 1
+    # to avoid groupby with one value in second level changing DataFrame name
+    rets.name = returns.name
+    return rets
+
+
 def calc_trades(current_contracts, desired_holdings, trade_weights, prices,
                 multipliers, **kwargs):
     """
