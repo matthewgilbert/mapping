@@ -326,6 +326,9 @@ def reindex(returns, index, limit):
     to be dropped since it is not present in weights. A discussion of this
     issue available at https://github.com/matthewgilbert/mapping/issues/9
     """
+    if not index.is_unique:
+        raise ValueError("'index' must be unique")
+
     cumulative_rets = (returns + 1).groupby(level=1).cumprod()
     # reindexing can both drop days and introduce NaNs for days not present
     cumulative_rets = cumulative_rets.reindex(index)

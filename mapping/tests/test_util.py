@@ -766,3 +766,11 @@ class TestUtil(unittest.TestCase):
 
         exp_rets = pd.Series([0.02, np.NaN], index=widx)
         assert_series_equal(exp_rets, new_rets)
+
+        # check unique index to avoid duplicates from pd.Series.reindex
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLF5')])
+        returns = pd.Series([0.02, -0.02], index=idx)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLF5')])
+        self.assertRaises(ValueError, util.reindex, returns, widx, limit=1)
