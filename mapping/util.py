@@ -225,6 +225,12 @@ def calc_rets(returns, weights):
     return rets
 
 
+def _stringify(xs):
+    if len(xs) <= 2:
+        return repr(xs)
+    return '[{!r}, ..., {!r}]'.format(xs[0], xs[-1])
+
+
 def _check_indices(returns, weights):
     # dictionaries of returns and weights
 
@@ -258,7 +264,7 @@ def _check_indices(returns, weights):
         # check 1
         if not dts_rets.isin(dts_wts).all():
             missing_dates = dts_rets.difference(dts_wts).tolist()
-            raise ValueError(msg1.format(root, missing_dates))
+            raise ValueError(msg1.format(root, _stringify(missing_dates)))
         # check 2
         for generic in wts.columns:
             gnrc_wts = wts.loc[:, generic]
@@ -269,7 +275,8 @@ def _check_indices(returns, weights):
             if not gnrc_wts.index.isin(rets.index).all():
                 # as list instead of MultiIndex for legibility when stack trace
                 missing_keys = (gnrc_wts.index.difference(rets.index).tolist())
-                raise KeyError(msg2.format(missing_keys, root, generic))
+                msg2 = msg2.format(_stringify(missing_keys), root, generic)
+                raise KeyError(msg2)
 
 
 def reindex(returns, index, limit):
