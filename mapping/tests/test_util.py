@@ -689,6 +689,7 @@ class TestUtil(unittest.TestCase):
         self.assert_dict_of_frames(wts, wts_exp)
 
     def test_reindex(self):
+        # related to https://github.com/matthewgilbert/mapping/issues/9
         # no op
         idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
                                          (TS('2015-01-03'), 'CLF5'),
@@ -753,4 +754,15 @@ class TestUtil(unittest.TestCase):
         new_rets = util.reindex(returns, widx, limit=1)
 
         exp_rets = pd.Series([np.NaN, 0.02, -0.02, -0.05], index=widx)
+        assert_series_equal(exp_rets, new_rets)
+
+        # weights for instrument with no prices
+        # https://github.com/matthewgilbert/mapping/issues/10
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5')])
+        returns = pd.Series([0.02], index=idx)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-04'), 'CLH5')])
+        new_rets = util.reindex(returns, widx, limit=1)
+
+        exp_rets = pd.Series([0.02, np.NaN], index=widx)
         assert_series_equal(exp_rets, new_rets)

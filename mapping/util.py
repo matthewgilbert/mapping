@@ -336,6 +336,7 @@ def reindex(returns, index, limit):
     # account for first value of each instrument
     first_valid_idx = (cumulative_rets.groupby(level=1)
                        .apply(lambda x: x.first_valid_index())).tolist()
+    first_valid_idx = [idx for idx in first_valid_idx if idx is not None]
     rets.loc[first_valid_idx] = cumulative_rets.loc[first_valid_idx]
     rets = rets - 1
     # to avoid groupby with one value in second level changing DataFrame name
