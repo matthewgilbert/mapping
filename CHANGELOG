@@ -30,3 +30,12 @@ indexed
 - improve error messages for util.calc_rets()
 - fix TravisCI / cvxpy compatibility, see issue #6
 - add business day convenience function for generating contract_dates
+
+# mapping 0.1.5
+
+- Fixes for np.busday_count compatibility with numpy 1.15.0 ([GH7](https://github.com/matthewgilbert/mapping/issues/7))
+- Fixes for pandas loc[] indexing warnings for missing keys
+- Add indexing validity checks in calc_returns() ([GH8](https://github.com/matthewgilbert/mapping/issues/8))
+- Add reindexing helper function for instrument returns ([GH9](https://github.com/matthewgilbert/mapping/issues/9), 
+[GH10](https://github.com/matthewgilbert/mapping/issues/10))
+- Add plotting diagnostics
