@@ -295,7 +295,7 @@ def reindex(returns, index, limit):
         A MultiIndex where the top level contains pandas.Timestamps and the
         second level is instrument names.
     limt: int
-        Number of periods to fill returns forward with 0
+        Number of periods to fill returns forward with 0.
 
     Returns
     -------
@@ -332,8 +332,9 @@ def reindex(returns, index, limit):
     cumulative_rets = (returns + 1).groupby(level=1).cumprod()
     # reindexing can both drop days and introduce NaNs for days not present
     cumulative_rets = cumulative_rets.reindex(index)
-    cumulative_rets = (cumulative_rets.groupby(level=1)
-                       .fillna(method="ffill", limit=limit))
+    if limit != 0:
+        cumulative_rets = (cumulative_rets.groupby(level=1)
+                           .fillna(method="ffill", limit=limit))
 
     rets = cumulative_rets.groupby(level=1).apply(lambda x: x / x.shift())
     # account for first value of each instrument

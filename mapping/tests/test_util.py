@@ -698,7 +698,7 @@ class TestUtil(unittest.TestCase):
                                          (TS('2015-01-04'), 'CLH5'),
                                          (TS('2015-01-05'), 'CLH5')])
         returns = pd.Series([0.02, 0.01, 0.06, .15, -0.02, -0.05], index=idx)
-        new_rets = util.reindex(returns, idx, limit=1)
+        new_rets = util.reindex(returns, idx, limit=0)
         exp_rets = returns
         assert_series_equal(exp_rets, new_rets)
 
