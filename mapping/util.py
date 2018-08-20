@@ -37,7 +37,7 @@ def read_price_data(files, name_func=None):
                                               names=["date", "contract"])
         dfs.append(df)
 
-    return pd.concat(dfs, axis=0).sort_index()
+    return pd.concat(dfs, axis=0, sort=False).sort_index()
 
 
 def flatten(weights):
