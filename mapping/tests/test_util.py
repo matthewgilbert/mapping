@@ -689,88 +689,84 @@ class TestUtil(unittest.TestCase):
         self.assert_dict_of_frames(wts, wts_exp)
 
     def test_reindex(self):
-        # related to https://github.com/matthewgilbert/mapping/issues/9
+        # related to https://github.com/matthewgilbert/mapping/issues/11
         # no op
         idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLH5'),
                                          (TS('2015-01-03'), 'CLF5'),
-                                         (TS('2015-01-03'), 'CLH5'),
-                                         (TS('2015-01-04'), 'CLF5'),
-                                         (TS('2015-01-04'), 'CLH5'),
-                                         (TS('2015-01-05'), 'CLH5')])
-        returns = pd.Series([0.02, 0.01, 0.06, .15, -0.02, -0.05], index=idx)
-        new_rets = util.reindex(returns, idx, limit=0)
-        exp_rets = returns
-        assert_series_equal(exp_rets, new_rets)
+                                         (TS('2015-01-03'), 'CLH5')])
+        prices = pd.Series([103, 101, 102, 100], index=idx)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-03'), 'CLH5')])
+        new_prices = util.reindex(prices, widx, limit=0)
+        exp_prices = prices
+        assert_series_equal(exp_prices, new_prices)
 
-        # returns are compounded
-        idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
-                                         (TS('2015-01-03'), 'CLF5'),
-                                         (TS('2015-01-03'), 'CLH5'),
-                                         (TS('2015-01-04'), 'CLF5'),
-                                         (TS('2015-01-04'), 'CLH5'),
-                                         (TS('2015-01-05'), 'CLH5')])
-        returns = pd.Series([0.02, 0.01, 0.06, 0.03, -0.02, -0.05], index=idx)
-        widx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
-                                          (TS('2015-01-04'), 'CLF5'),
-                                          (TS('2015-01-04'), 'CLH5'),
-                                          (TS('2015-01-05'), 'CLH5')])
-        new_rets = util.reindex(returns, widx, limit=1)
-
-        cr1 = (0.01 + 1)*(0.03 + 1) - 1
-        cr2 = (0.06 + 1)*(-0.02 + 1) - 1
-        exp_rets = pd.Series([0.02, cr1, cr2, -0.05], index=widx)
-        assert_series_equal(exp_rets, new_rets)
+        # missing front prices error
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5')])
+        prices = pd.Series([100], index=idx)
+        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5')])
+        self.assertRaises(ValueError, util.reindex, prices, widx, 0)
 
         # NaN returns introduced and filled
-        idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-01'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLH5'),
                                          (TS('2015-01-04'), 'CLF5'),
                                          (TS('2015-01-04'), 'CLH5')])
-        returns = pd.Series([0.02, -0.02, -0.05], index=idx)
+        prices = pd.Series([100, 101, 102, 103, 104], index=idx)
         widx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
-                                          (TS('2015-01-03'), 'CLF5'),
+                                          (TS('2015-01-02'), 'CLH5'),
                                           (TS('2015-01-04'), 'CLF5'),
                                           (TS('2015-01-04'), 'CLH5'),
                                           (TS('2015-01-05'), 'CLF5'),
                                           (TS('2015-01-05'), 'CLH5'),
                                           (TS('2015-01-06'), 'CLF5'),
                                           (TS('2015-01-06'), 'CLH5')])
-        new_rets = util.reindex(returns, widx, limit=1)
+        new_prices = util.reindex(prices, widx, limit=1)
 
-        exp_rets = pd.Series(
-            [0.02, 0, -0.02, -0.05, 0, 0, np.NaN, np.NaN],
-            index=widx
-        )
-        assert_series_equal(exp_rets, new_rets)
-
-        # leading NaNs introduced
-        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-01'), 'CLF5'),
+                                         (TS('2015-01-01'), 'CLH5'),
+                                         (TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLH5'),
                                          (TS('2015-01-04'), 'CLF5'),
-                                         (TS('2015-01-05'), 'CLF5')])
-        returns = pd.Series([0.02, -0.02, -0.05], index=idx)
+                                         (TS('2015-01-04'), 'CLH5'),
+                                         (TS('2015-01-05'), 'CLF5'),
+                                         (TS('2015-01-05'), 'CLH5'),
+                                         (TS('2015-01-06'), 'CLF5'),
+                                         (TS('2015-01-06'), 'CLH5')
+                                         ])
+        exp_prices = pd.Series([100, np.NaN, 101, 102, 103, 104, 103,
+                                104, np.NaN, np.NaN], index=idx)
+        assert_series_equal(exp_prices, new_prices)
+
+        # standard subset
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-01'), 'CLF5'),
+                                         (TS('2015-01-01'), 'CHF5'),
+                                         (TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLH5'),
+                                         (TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLH5'),
+                                         (TS('2015-01-04'), 'CLF5'),
+                                         (TS('2015-01-04'), 'CLH5')])
+        prices = pd.Series([100, 101, 102, 103, 104, 105, 106, 107], index=idx)
         widx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
                                           (TS('2015-01-03'), 'CLF5'),
-                                          (TS('2015-01-04'), 'CLF5'),
-                                          (TS('2015-01-05'), 'CLF5')])
-        new_rets = util.reindex(returns, widx, limit=1)
+                                          (TS('2015-01-03'), 'CLH5')])
+        new_prices = util.reindex(prices, widx, limit=0)
 
-        exp_rets = pd.Series([np.NaN, 0.02, -0.02, -0.05], index=widx)
-        assert_series_equal(exp_rets, new_rets)
-
-        # weights for instrument with no prices
-        # https://github.com/matthewgilbert/mapping/issues/10
-        idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5')])
-        returns = pd.Series([0.02], index=idx)
-        widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
-                                          (TS('2015-01-04'), 'CLH5')])
-        new_rets = util.reindex(returns, widx, limit=1)
-
-        exp_rets = pd.Series([0.02, np.NaN], index=widx)
-        assert_series_equal(exp_rets, new_rets)
+        idx = pd.MultiIndex.from_tuples([(TS('2015-01-01'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLF5'),
+                                         (TS('2015-01-02'), 'CLH5'),
+                                         (TS('2015-01-03'), 'CLF5'),
+                                         (TS('2015-01-03'), 'CLH5')])
+        exp_prices = pd.Series([100, 102, 103, 104, 105], index=idx)
+        assert_series_equal(exp_prices, new_prices)
 
         # check unique index to avoid duplicates from pd.Series.reindex
         idx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
                                          (TS('2015-01-04'), 'CLF5')])
-        returns = pd.Series([0.02, -0.02], index=idx)
+        prices = pd.Series([100.10, 101.13], index=idx)
         widx = pd.MultiIndex.from_tuples([(TS('2015-01-03'), 'CLF5'),
                                           (TS('2015-01-03'), 'CLF5')])
-        self.assertRaises(ValueError, util.reindex, returns, widx, limit=1)
+        self.assertRaises(ValueError, util.reindex, prices, widx, limit=0)

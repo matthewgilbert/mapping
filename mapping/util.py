@@ -279,73 +279,87 @@ def _check_indices(returns, weights):
                 raise KeyError(msg2)
 
 
-def reindex(returns, index, limit):
+def reindex(prices, index, limit):
     """
-    Reindex a pd.Series by a pd.MultiIndex. Fill forward missing values with 0
-    up to some limit and compound return dates which are dropped during the
-    reindexing.
+    Reindex a pd.Series of prices such that when instrument level returns are
+    calculated they are compatible with a pd.MultiIndex of instrument weights
+    in calc_rets(). This amount to reindexing the series by an augmented
+    version of index which includes the preceding date for the first appearance
+    of each instrument. Fill forward missing values with previous price up to
+    some limit.
 
     Parameters
     ----------
-    returns: pandas.Series
-        A Series of instrument returns with a MultiIndex where the top level is
-        pandas.Timestamps and the second level is instrument names. Values
-        correspond to one period instrument returns.
+    prices: pandas.Series
+        A Series of instrument prices with a MultiIndex where the top level is
+        pandas.Timestamps and the second level is instrument names.
     index: pandas.MultiIndex
         A MultiIndex where the top level contains pandas.Timestamps and the
         second level is instrument names.
     limt: int
-        Number of periods to fill returns forward with 0.
+        Number of periods to fill prices forward.
 
     Returns
     -------
-    A Series of returns which has been reindexed to the frequency of weights.
-    Missing days are added as NaN (filled forward with 0 up to some limit) and
-    days which are omitted are compounding into the follow day.
+    A pandas.Series of reindexed prices where the top level is
+    pandas.Timestamps and the second level is instrument names.
+
+    See also: calc_rets()
 
     Example
     -------
     >>> import pandas as pd
     >>> from pandas import Timestamp as TS
     >>> import mapping.util as util
-    >>> idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
-    ...                                  (TS('2015-01-04'), 'CLF5'),
-    ...                                  (TS('2015-01-05'), 'CLF5')])
-    >>> returns = pd.Series([0.02, -0.02, -0.05], index=idx)
-    >>> widx = pd.MultiIndex.from_tuples([(TS('2015-01-01'), 'CLF5'),
-    ...                                   (TS('2015-01-02'), 'CLF5'),
-    ...                                   (TS('2015-01-03'), 'CLF5'),
-    ...                                   (TS('2015-01-05'), 'CLF5'),
-    ...                                   (TS('2015-01-06'), 'CLF5'),
-    ...                                   (TS('2015-01-07'), 'CLF5')])
-    >>> util.reindex(returns, widx, limit=1)
-
-    Notes
-    -----
-    When we splice contract returns we don't want a date present in the returns
-    to be dropped since it is not present in weights. A discussion of this
-    issue available at https://github.com/matthewgilbert/mapping/issues/9
+    >>> idx = pd.MultiIndex.from_tuples([(TS('2015-01-04'), 'CLF5'),
+    ...                                  (TS('2015-01-05'), 'CLF5'),
+    ...                                  (TS('2015-01-05'), 'CLH5'),
+    ...                                  (TS('2015-01-06'), 'CLF5'),
+    ...                                  (TS('2015-01-06'), 'CLH5'),
+    ...                                  (TS('2015-01-07'), 'CLF5'),
+    ...                                  (TS('2015-01-07'), 'CLH5')])
+    >>> prices = pd.Series([100.12, 101.50, 102.51, 103.51, 102.73, 102.15,
+    ...                     104.37], index=idx)
+    >>> widx = pd.MultiIndex.from_tuples([(TS('2015-01-05'), 'CLF5'),
+    ...                                   (TS('2015-01-05'), 'CLH5'),
+    ...                                   (TS('2015-01-07'), 'CLF5'),
+    ...                                   (TS('2015-01-07'), 'CLH5')])
+    >>> util.reindex(prices, widx, limit=0)
     """
     if not index.is_unique:
         raise ValueError("'index' must be unique")
 
-    cumulative_rets = (returns + 1).groupby(level=1).cumprod()
-    # reindexing can both drop days and introduce NaNs for days not present
-    cumulative_rets = cumulative_rets.reindex(index)
-    if limit != 0:
-        cumulative_rets = (cumulative_rets.groupby(level=1)
-                           .fillna(method="ffill", limit=limit))
+    index = index.sort_values()
+    price_dts = prices.sort_index().index.unique(level=0)
+    index_dts = index.unique(level=0)
 
-    rets = cumulative_rets.groupby(level=1).apply(lambda x: x / x.shift())
-    # account for first value of each instrument
-    first_valid_idx = (cumulative_rets.groupby(level=1)
-                       .apply(lambda x: x.first_valid_index())).tolist()
-    first_valid_idx = [idx for idx in first_valid_idx if idx is not None]
-    rets.loc[first_valid_idx] = cumulative_rets.loc[first_valid_idx]
-    rets = rets - 1
-    # to avoid groupby with one value in second level changing DataFrame name
-    rets.name = returns.name
-    return rets
+    mask = price_dts < index_dts[0]
+    leading_price_dts = price_dts[mask]
+    if len(leading_price_dts) == 0:
+        raise ValueError("'prices' must have a date preceding first date in "
+                         "'index'")
+    prev_dts = index_dts.tolist()
+    prev_dts.insert(0, leading_price_dts[-1])
+    # avoid just lagging to preserve the calendar
+    previous_date = dict(zip(index_dts, prev_dts))
+
+    first_instr = index.to_frame(index=False)
+    first_instr.columns = ["date", "instrument"]
+    first_instr = (
+        first_instr.drop_duplicates(subset=["instrument"], keep="first")
+    )
+    first_instr.loc[:, "prev_date"] = (
+        first_instr.loc[:, "date"].apply(lambda x: previous_date[x])
+    )
+    additional_indices = pd.MultiIndex.from_tuples(
+        first_instr.loc[:, ["prev_date", "instrument"]].values.tolist()
+    )
+
+    augmented_index = index.union(additional_indices).sort_values()
+    prices = prices.reindex(augmented_index)
+    if limit != 0:
+        prices = prices.groupby(level=1).fillna(method="ffill", limit=limit)
+    return prices
 
 
 def calc_trades(current_contracts, desired_holdings, trade_weights, prices,
