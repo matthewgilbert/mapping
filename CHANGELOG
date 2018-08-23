@@ -39,3 +39,7 @@ indexed
 - Add reindexing helper function for instrument returns ([GH9](https://github.com/matthewgilbert/mapping/issues/9), 
 [GH10](https://github.com/matthewgilbert/mapping/issues/10))
 - Add plotting diagnostics
+
+# mapping 0.1.6
+
+- Change util.reindex() to operate on prices ([GH11](https://github.com/matthewgilbert/mapping/issues/11))
