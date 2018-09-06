@@ -8,6 +8,7 @@ python:
    - "3.4"
    - "3.5"
    - "3.6"
+   - "3.7"
 install:
   - sudo apt-get update
   # We do this conditionally because it saves us some downloading if the
@@ -26,22 +27,32 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip flake8 pytest-cov
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pip flake8
+    pytest-cov conda-build anaconda-client conda-verify
   - conda install -q -n test-environment -c conda-forge lapack
   - conda install -q -n test-environment -c cvxgrp cvxpy=$CVXPY_VERSION
+ 
   - source activate test-environment
   # pip install coveralls since conda only has > 3.5
   - pip install coveralls
   - python setup.py install
+
 # command to run tests
 script:
   - flake8 mapping
   - pytest mapping/tests -v --cov=mapping --cov-report term-missing
+  - if [ $TRAVIS_PYTHON_VERSION != 3.5]; then conda-build --no-anaconda-upload .; fi
+
 after_success:
-  coveralls
-# Don't want notifications
+  - coveralls
+  - if [[ $TRAVIS_TAG && $CVX_VERSION == 1.0.1 && $TRAVIS_PYTHON_VERSION != 3.5]];
+    then echo "Uploading $(conda build . --output) to anaconda cloud"; fi
+  - if [[ $TRAVIS_TAG && $CVX_VERSION == 1.0.1 && $TRAVIS_PYTHON_VERSION != 3.5]];
+    then anaconda -t $CONDA_UPLOAD_TOKEN upload $(conda build . --output); fi
+
 notifications:
   email: false
+
 deploy:
   provider: pypi
   user: matthewgilbert
@@ -53,4 +64,4 @@ deploy:
     distributions: sdist bdist_wheel
     repo: matthewgilbert/mapping
     branch: master
-    condition: $CVXPY_VERSION == 1.0.1 && $TRAVIS_PYTHON_VERSION == 3.6
+    condition: $CVXPY_VERSION == 1.0.1 && $TRAVIS_PYTHON_VERSION == 3.7
