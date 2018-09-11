@@ -830,4 +830,4 @@ def test_reindex_with_index_names_smoketest():
         [(TS('2015-01-03'), 'CLF5'), (TS('2015-01-03'), 'CLH5')],
         names=["date", "contract"]
     )
-    new_prices = util.reindex(prices, widx, limit=0)
+    util.reindex(prices, widx, limit=0)
