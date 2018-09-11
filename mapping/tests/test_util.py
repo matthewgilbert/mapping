@@ -818,3 +818,16 @@ def test_reindex():
                                       (TS('2015-01-03'), 'CLF5')])
     with pytest.raises(ValueError):
         util.reindex(prices, widx, limit=0)
+
+
+def test_reindex_with_index_names_smoketest():
+    idx = pd.MultiIndex.from_tuples([(TS('2015-01-02'), 'CLF5'),
+                                     (TS('2015-01-02'), 'CLH5'),
+                                     (TS('2015-01-03'), 'CLF5'),
+                                     (TS('2015-01-03'), 'CLH5')])
+    prices = pd.Series([103, 101, 102, 100], index=idx)
+    widx = pd.MultiIndex.from_tuples(
+        [(TS('2015-01-03'), 'CLF5'), (TS('2015-01-03'), 'CLH5')],
+        names=["date", "contract"]
+    )
+    new_prices = util.reindex(prices, widx, limit=0)

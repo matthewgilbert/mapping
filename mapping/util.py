@@ -330,6 +330,7 @@ def reindex(prices, index, limit):
         raise ValueError("'index' must be unique")
 
     index = index.sort_values()
+    index.names = ["date", "instrument"]
     price_dts = prices.sort_index().index.unique(level=0)
     index_dts = index.unique(level=0)
 
@@ -344,7 +345,6 @@ def reindex(prices, index, limit):
     previous_date = dict(zip(index_dts, prev_dts))
 
     first_instr = index.to_frame(index=False)
-    first_instr.columns = ["date", "instrument"]
     first_instr = (
         first_instr.drop_duplicates(subset=["instrument"], keep="first")
     )
